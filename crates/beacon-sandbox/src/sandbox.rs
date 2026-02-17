@@ -183,6 +183,7 @@ impl Sandbox {
                     ExternType::Global(_) => "global",
                     ExternType::Memory(_) => "memory",
                     ExternType::Table(_) => "table",
+                    ExternType::Tag(_) => "tag",
                 };
                 (export.name().to_string(), kind.to_string())
             })
