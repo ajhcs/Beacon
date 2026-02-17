@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "opencode"
+  ],
+  "enableAllProjectMcpServers": true
+}
