@@ -88,6 +88,36 @@ impl WeightTable {
             *weight *= factor;
         }
     }
+
+    /// Clamp all state-conditioned weights to a minimum value.
+    /// Weights already at 0.0 (provably unreachable) are preserved.
+    pub fn clamp_min(&mut self, min_weight: f64) {
+        for weight in self.weights.values_mut() {
+            if *weight > 0.0 && *weight < min_weight {
+                *weight = min_weight;
+            }
+        }
+    }
+
+    /// Get all state-conditioned weight entries (for serialization).
+    pub fn entries(&self) -> &HashMap<WeightKey, f64> {
+        &self.weights
+    }
+
+    /// Get all default weights (for serialization).
+    pub fn defaults(&self) -> &HashMap<String, f64> {
+        &self.defaults
+    }
+
+    /// Load state-conditioned weights (for deserialization).
+    pub fn load_entries(&mut self, entries: HashMap<WeightKey, f64>) {
+        self.weights = entries;
+    }
+
+    /// Load default weights (for deserialization).
+    pub fn load_defaults(&mut self, defaults: HashMap<String, f64>) {
+        self.defaults = defaults;
+    }
 }
 
 impl Default for WeightTable {
