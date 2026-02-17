@@ -5,6 +5,9 @@ use beacon_compiler::compile;
 use beacon_compiler::compile::CompiledIR;
 use beacon_ir::parse::parse_ir;
 
+use crate::analytics::{CampaignAnalytics, CampaignPhase};
+use crate::limits::{EngineLimits, ResourceLimits, StopReason};
+
 #[derive(Debug, thiserror::Error)]
 pub enum CampaignError {
     #[error("IR parse error: {0}")]
@@ -12,6 +15,15 @@ pub enum CampaignError {
 
     #[error("Compilation error: {0}")]
     Compile(#[from] beacon_compiler::compile::CompileError),
+
+    #[error("Campaign not found: {0}")]
+    NotFound(String),
+
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
+    #[error("Limit exceeded: {0}")]
+    LimitExceeded(String),
 }
 
 /// Budget estimates computed from IR complexity.
@@ -27,27 +39,80 @@ pub struct CampaignState {
     pub id: String,
     pub compiled: CompiledIR,
     pub budget: Budget,
+    pub resource_limits: ResourceLimits,
+    pub phase: CampaignPhase,
+    /// Total findings discovered so far.
+    pub findings_count: u32,
+    /// Total steps executed so far.
+    pub steps_executed: u64,
+    /// Coverage targets hit / total.
+    pub coverage_hit: u32,
+    pub coverage_total: u32,
+    /// Stop reason (if finished).
+    pub stop_reason: Option<StopReason>,
+}
+
+/// A finding record for MCP tool responses.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct FindingRecord {
+    pub id: u64,
+    pub seqno: u64,
+    pub finding_type: String,
+    pub action: String,
+    pub details: String,
+    pub model_generation: u64,
+}
+
+/// Coverage target status.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CoverageTarget {
+    pub target: String,
+    pub status: String,
+    pub hit_count: u64,
 }
 
 /// Manages all active campaigns.
 pub struct CampaignManager {
     campaigns: Mutex<HashMap<String, CampaignState>>,
+    findings: Mutex<HashMap<String, Vec<FindingRecord>>>,
+    coverage: Mutex<HashMap<String, Vec<CoverageTarget>>>,
+    analytics: Mutex<HashMap<String, CampaignAnalytics>>,
     next_id: Mutex<u64>,
+    engine_limits: EngineLimits,
 }
 
 impl CampaignManager {
     pub fn new() -> Self {
         Self {
             campaigns: Mutex::new(HashMap::new()),
+            findings: Mutex::new(HashMap::new()),
+            coverage: Mutex::new(HashMap::new()),
+            analytics: Mutex::new(HashMap::new()),
             next_id: Mutex::new(1),
+            engine_limits: EngineLimits::default(),
         }
     }
 
     /// Compile IR JSON and create a new campaign.
     pub fn compile(&self, ir_json: &str) -> Result<String, CampaignError> {
+        // Check engine limits.
+        let campaign_count = self.campaigns.lock().unwrap().len();
+        if campaign_count as u32 >= self.engine_limits.max_concurrent_campaigns {
+            return Err(CampaignError::LimitExceeded(format!(
+                "Too many concurrent campaigns ({}/{})",
+                campaign_count, self.engine_limits.max_concurrent_campaigns
+            )));
+        }
+        if ir_json.len() as u64 > self.engine_limits.max_ir_json_bytes {
+            return Err(CampaignError::LimitExceeded(format!(
+                "IR JSON too large ({} bytes, max {})",
+                ir_json.len(),
+                self.engine_limits.max_ir_json_bytes
+            )));
+        }
+
         let ir = parse_ir(ir_json)?;
         let compiled = compile(&ir)?;
-
         let budget = estimate_budget(&ir);
 
         let campaign_id = {
@@ -61,12 +126,31 @@ impl CampaignManager {
             id: campaign_id.clone(),
             compiled,
             budget,
+            resource_limits: ResourceLimits::default(),
+            phase: CampaignPhase::Compiled,
+            findings_count: 0,
+            steps_executed: 0,
+            coverage_hit: 0,
+            coverage_total: 0,
+            stop_reason: None,
         };
 
         self.campaigns
             .lock()
             .unwrap()
             .insert(campaign_id.clone(), state);
+        self.findings
+            .lock()
+            .unwrap()
+            .insert(campaign_id.clone(), Vec::new());
+        self.coverage
+            .lock()
+            .unwrap()
+            .insert(campaign_id.clone(), Vec::new());
+        self.analytics
+            .lock()
+            .unwrap()
+            .insert(campaign_id.clone(), CampaignAnalytics::new());
 
         Ok(campaign_id)
     }
@@ -79,6 +163,97 @@ impl CampaignManager {
     /// Number of active campaigns.
     pub fn active_campaign_count(&self) -> usize {
         self.campaigns.lock().unwrap().len()
+    }
+
+    /// Transition a campaign to a new phase.
+    pub fn set_phase(&self, id: &str, phase: CampaignPhase) -> Result<(), CampaignError> {
+        let mut campaigns = self.campaigns.lock().unwrap();
+        let state = campaigns
+            .get_mut(id)
+            .ok_or_else(|| CampaignError::NotFound(id.to_string()))?;
+        state.phase = phase.clone();
+
+        // Update analytics.
+        if let Some(analytics) = self.analytics.lock().unwrap().get_mut(id) {
+            analytics.state = phase;
+        }
+        Ok(())
+    }
+
+    /// Record a finding for a campaign.
+    pub fn add_finding(&self, campaign_id: &str, finding: FindingRecord) {
+        if let Some(findings) = self.findings.lock().unwrap().get_mut(campaign_id) {
+            findings.push(finding);
+        }
+        if let Some(state) = self.campaigns.lock().unwrap().get_mut(campaign_id) {
+            state.findings_count += 1;
+        }
+    }
+
+    /// Get findings for a campaign, optionally since a sequence number.
+    pub fn get_findings(&self, campaign_id: &str, since_seqno: Option<u64>) -> Vec<FindingRecord> {
+        let findings = self.findings.lock().unwrap();
+        match findings.get(campaign_id) {
+            Some(list) => match since_seqno {
+                Some(seqno) => list.iter().filter(|f| f.seqno > seqno).cloned().collect(),
+                None => list.clone(),
+            },
+            None => Vec::new(),
+        }
+    }
+
+    /// Update coverage data for a campaign.
+    pub fn update_coverage(&self, campaign_id: &str, targets: Vec<CoverageTarget>) {
+        let hit = targets.iter().filter(|t| t.status == "hit").count() as u32;
+        let total = targets.len() as u32;
+
+        if let Some(state) = self.campaigns.lock().unwrap().get_mut(campaign_id) {
+            state.coverage_hit = hit;
+            state.coverage_total = total;
+        }
+        if let Some(cov) = self.coverage.lock().unwrap().get_mut(campaign_id) {
+            *cov = targets;
+        }
+    }
+
+    /// Get coverage data for a campaign.
+    pub fn get_coverage(&self, campaign_id: &str) -> Vec<CoverageTarget> {
+        self.coverage
+            .lock()
+            .unwrap()
+            .get(campaign_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Abort a campaign.
+    pub fn abort(&self, campaign_id: &str) -> Result<CampaignState, CampaignError> {
+        let mut campaigns = self.campaigns.lock().unwrap();
+        let state = campaigns
+            .get_mut(campaign_id)
+            .ok_or_else(|| CampaignError::NotFound(campaign_id.to_string()))?;
+
+        state.phase = CampaignPhase::Aborted;
+        state.stop_reason = Some(StopReason::UserAborted);
+
+        if let Some(analytics) = self.analytics.lock().unwrap().get_mut(campaign_id) {
+            analytics.state = CampaignPhase::Aborted;
+        }
+
+        Ok(state.clone())
+    }
+
+    /// Get analytics for a campaign.
+    pub fn get_analytics(&self, campaign_id: &str) -> Option<CampaignAnalytics> {
+        self.analytics.lock().unwrap().get(campaign_id).cloned()
+    }
+
+    /// Remove a completed/aborted campaign.
+    pub fn remove_campaign(&self, campaign_id: &str) {
+        self.campaigns.lock().unwrap().remove(campaign_id);
+        self.findings.lock().unwrap().remove(campaign_id);
+        self.coverage.lock().unwrap().remove(campaign_id);
+        self.analytics.lock().unwrap().remove(campaign_id);
     }
 }
 
