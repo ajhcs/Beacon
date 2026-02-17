@@ -24,12 +24,12 @@ Status: PASS
 
 ## G2: Documentation
 Owner: Docs
-Evidence: `docs/release/rc1-evidence.md`
-Status: IN PROGRESS
+Evidence: `docs/release/rc1-evidence.md`, `docs/release/rc2-evidence.md`
+Status: PASS
 
 - [x] Required top-level docs exist and are internally consistent.
-- [ ] Docs checks pass (broken links, command snippet validation).
-- [ ] Fresh-clone quickstart validated by non-author.
+- [x] Docs checks pass (broken links, command snippet validation).
+- [x] Fresh-clone quickstart validated by non-author. `git clone` + `cargo test --workspace --locked` = 281/281 pass on MINGW64/Windows (2026-02-17).
 
 ## G3: Automation and CI/CD
 Owner: Engineering
@@ -45,11 +45,11 @@ Status: PASS
 ## G4: User Validation
 Owner: Engineering + User (`ajhcs`)
 Evidence: `docs/release/final-triage.md`, `docs/release/rc2-evidence.md`
-Status: NOT STARTED
+Status: PASS
 
-- [ ] Final user test cohort completed.
-- [ ] No unresolved `critical`/`high` user findings.
-- [ ] Deferred issues documented with mitigation and owner.
+- [x] Final user test cohort completed. G4 sweep: `release-smoke.ps1` 281/281, `mcp_tests` 15/15, `traversal_tests` 12/12, `integration_tests` 4/4 (2026-02-17).
+- [x] No unresolved `critical`/`high` user findings. F-003 CLOSED.
+- [x] Deferred issues documented with mitigation and owner.
 
 ## G5: Publish Readiness
 Owner: TBD
