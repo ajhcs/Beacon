@@ -372,11 +372,11 @@ mod tests {
             &["role".into(), "vis".into(), "owner".into()],
         );
 
-        // role x vis = 3*3 = 9
+        // role x vis = 3*2 = 6
         // role x owner = 3*2 = 6
-        // vis x owner = 3*2 = 6
-        // Total: 21
-        assert_eq!(targets.len(), 21);
+        // vis x owner = 2*2 = 4
+        // Total: 16
+        assert_eq!(targets.len(), 16);
     }
 
     #[test]
