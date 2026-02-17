@@ -1,5 +1,4 @@
 use crate::solver::{DomainValue, TestVector};
-use std::collections::BTreeMap;
 
 /// Abstract source of input vectors for action execution.
 ///

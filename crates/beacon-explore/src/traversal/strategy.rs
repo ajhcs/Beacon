@@ -1,4 +1,4 @@
-use beacon_compiler::graph::{BranchEdge, NodeId};
+use beacon_compiler::graph::BranchEdge;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
