@@ -590,3 +590,115 @@ fn test_effects_applied_during_traversal() {
         Some(&Value::String("private".to_string()))
     );
 }
+
+// ── Integration test: Full document_lifecycle protocol traversal ────────
+
+/// Load the full document_lifecycle fixture, compile it, and run a model-only
+/// campaign traversal through the compiled NDA graph.
+///
+/// This is the comprehensive integration test: real IR -> real compiler ->
+/// real NDA graph -> real traversal engine -> real effects -> real coverage.
+#[test]
+fn test_document_lifecycle_model_only_campaign() {
+    // 1. Load the full document_lifecycle IR fixture
+    let ir_json = include_str!("../../beacon-ir/tests/fixtures/document_lifecycle.json");
+    let ir: BeaconIR = serde_json::from_str(ir_json).expect("fixture should parse");
+
+    // 2. Compile the IR into NDA graphs
+    let compiled = beacon_compiler::compile(&ir).expect("fixture should compile");
+    let graph = compiled
+        .graphs
+        .get("document_lifecycle")
+        .expect("document_lifecycle graph should exist");
+
+    // 3. Set up model state with an authenticated User actor
+    let mut model = ModelState::new();
+    let actor = model.create_instance("User");
+    model.set_field(&actor, "authenticated", Value::Bool(true));
+    model.set_field(&actor, "role", Value::String("admin".to_string()));
+    model.set_field(&actor, "id", Value::String("user-1".to_string()));
+
+    // 4. Run a model-only campaign
+    let mut vector_source = MockVectorSource::new();
+    let config = CampaignConfig {
+        max_passes: 50,
+        max_steps_per_pass: 200,
+        seed: 42,
+        strategy_depth_limit: 4,
+    };
+
+    let mut executor = ModelOnlyExecutor;
+    let result = run_campaign(
+        graph,
+        &mut model,
+        &mut executor,
+        &ir,
+        &[], // No compiled invariants for now (they use quantifiers which need model iteration)
+        actor,
+        &mut vector_source,
+        &config,
+    );
+
+    // 5. Verify the campaign completed
+    assert_eq!(result.passes_completed, 50);
+    assert!(
+        result.total_actions > 0,
+        "should have executed actions, got 0"
+    );
+
+    // 6. Verify coverage — the create_document action must have been hit
+    // (it's the first action in the seq, always executed)
+    let model_trace = model.trace();
+    let create_count = model_trace
+        .iter()
+        .filter(|t| t.action == "create_document")
+        .count();
+    assert!(
+        create_count >= 50,
+        "each pass should execute create_document at least once, got {}",
+        create_count
+    );
+
+    // 7. Verify that the loop body was entered and various branches taken.
+    // With 50 passes the traversal should have explored multiple action types.
+    let unique_actions: std::collections::HashSet<&str> =
+        model_trace.iter().map(|t| t.action.as_str()).collect();
+    assert!(
+        unique_actions.len() >= 2,
+        "should have explored at least 2 unique actions across 50 passes, got {:?}",
+        unique_actions
+    );
+
+    // 8. Verify that Document instances were created by effects
+    let docs = model.all_instances("Document");
+    assert!(
+        docs.len() >= 50,
+        "each pass creates a document, expected >= 50, got {}",
+        docs.len()
+    );
+
+    // 9. Verify determinism — same seed, same result
+    let mut model2 = ModelState::new();
+    let actor2 = model2.create_instance("User");
+    model2.set_field(&actor2, "authenticated", Value::Bool(true));
+    model2.set_field(&actor2, "role", Value::String("admin".to_string()));
+    model2.set_field(&actor2, "id", Value::String("user-1".to_string()));
+    let mut vs2 = MockVectorSource::new();
+    let mut executor2 = ModelOnlyExecutor;
+
+    let result2 = run_campaign(
+        graph,
+        &mut model2,
+        &mut executor2,
+        &ir,
+        &[],
+        actor2,
+        &mut vs2,
+        &config,
+    );
+
+    assert_eq!(
+        result.total_actions, result2.total_actions,
+        "same seed should produce same action count"
+    );
+}
