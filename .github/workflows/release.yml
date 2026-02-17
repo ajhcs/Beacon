@@ -139,7 +139,7 @@ jobs:
         shell: pwsh
         run: |
           $packageRoot = "dist/${{ matrix.target }}"
-          $archiveName = "beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+          $archiveName = "fresnel-fir-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
           $archivePath = Join-Path "dist" $archiveName
           if (Test-Path $archivePath) {
             Remove-Item $archivePath -Force
@@ -152,10 +152,10 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: beacon-release-${{ matrix.target }}
+          name: fresnel-fir-release-${{ matrix.target }}
           path: |
-            dist/beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
-            dist/beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+            dist/fresnel-fir-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            dist/fresnel-fir-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
           if-no-files-found: error
 
   publish-release:
@@ -172,7 +172,7 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: beacon-release-*
+          pattern: fresnel-fir-release-*
           path: release-artifacts
           merge-multiple: true
 
@@ -201,7 +201,7 @@ jobs:
 
           $tag = "${{ github.ref_name }}"
           $notesLines = @(
-            "# Beacon $tag",
+            "# FresnelFir $tag",
             "",
             "## Included artifacts",
             $artifactText,
@@ -230,9 +230,9 @@ jobs:
           $exists = $LASTEXITCODE -eq 0
 
           if ($exists) {
-            & gh release edit $tag --title "Beacon $tag" --notes-file $notesPath
+            & gh release edit $tag --title "FresnelFir $tag" --notes-file $notesPath
           } else {
-            & gh release create $tag --title "Beacon $tag" --notes-file $notesPath
+            & gh release create $tag --title "FresnelFir $tag" --notes-file $notesPath
           }
 
           $uploadFiles = @(Get-ChildItem -Path "release-artifacts" -File | Where-Object {

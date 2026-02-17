@@ -1,10 +1,10 @@
-# Beacon Implementation Plan
+# FresnelFir Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build a self-improving verification harness for AI-assisted software development, starting from the Declarative IR compiler and progressively adding model state, WASM sandbox, solver, traversal, and adaptation.
 
-**Architecture:** Cargo workspace with internal crates (`beacon-ir`, `beacon-compiler`, `beacon-model`, `beacon-explore`, `beacon-sandbox`, `beacon-vif`, `beacon-core`). Single native binary. Progressive layers where each is independently testable. See `docs/plans/2026-02-17-beacon-harness-design.md` for full design.
+**Architecture:** Cargo workspace with internal crates (`fresnel-fir-ir`, `fresnel-fir-compiler`, `fresnel-fir-model`, `fresnel-fir-explore`, `fresnel-fir-sandbox`, `fresnel-fir-vif`, `fresnel-fir-core`). Single native binary. Progressive layers where each is independently testable. See `docs/plans/2026-02-17-beacon-harness-design.md` for full design.
 
 **Tech Stack:** Rust (2021 edition), serde/serde_json, wasmtime (Layer 2), z3-sys or varisat (Layer 3), rayon (Layer 4), tokio (MCP server), crossbeam (channels).
 
@@ -42,12 +42,12 @@ serde_json = "1"
 thiserror = "2"
 ```
 
-**Step 2: Create beacon-ir crate**
+**Step 2: Create fresnel-fir-ir crate**
 
 ```toml
 # crates/beacon-ir/Cargo.toml
 [package]
-name = "beacon-ir"
+name = "fresnel-fir-ir"
 version.workspace = true
 edition.workspace = true
 
@@ -64,17 +64,17 @@ pub mod types;
 pub mod parse;
 ```
 
-**Step 3: Create beacon-compiler crate**
+**Step 3: Create fresnel-fir-compiler crate**
 
 ```toml
 # crates/beacon-compiler/Cargo.toml
 [package]
-name = "beacon-compiler"
+name = "fresnel-fir-compiler"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-beacon-ir = { path = "../beacon-ir" }
+fresnel-fir-ir = { path = "../beacon-ir" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -97,7 +97,7 @@ Expected: Compiles with no errors.
 
 ```bash
 git add Cargo.toml crates/
-git commit -m "scaffold: workspace with beacon-ir and beacon-compiler crates"
+git commit -m "scaffold: workspace with fresnel-fir-ir and fresnel-fir-compiler crates"
 ```
 
 ---
@@ -114,20 +114,20 @@ The structured predicate language — JSON AST expressions, no string parsing.
 
 ```rust
 // crates/beacon-ir/tests/expr_tests.rs
-use beacon_ir::expr::Expr;
+use fresnel_fir_ir::expr::Expr;
 
 #[test]
 fn test_parse_literal_bool() {
     let json = serde_json::json!(true);
     let expr: Expr = serde_json::from_value(json).unwrap();
-    assert!(matches!(expr, Expr::Literal(beacon_ir::expr::Literal::Bool(true))));
+    assert!(matches!(expr, Expr::Literal(fresnel_fir_ir::expr::Literal::Bool(true))));
 }
 
 #[test]
 fn test_parse_literal_string() {
     let json = serde_json::json!("public");
     let expr: Expr = serde_json::from_value(json).unwrap();
-    assert!(matches!(expr, Expr::Literal(beacon_ir::expr::Literal::String(s)) if s == "public"));
+    assert!(matches!(expr, Expr::Literal(fresnel_fir_ir::expr::Literal::String(s)) if s == "public"));
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn test_parse_forall_quantifier() {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cargo test -p beacon-ir`
+Run: `cargo test -p fresnel-fir-ir`
 Expected: Compilation error — `Expr` type doesn't exist yet.
 
 **Step 3: Implement expression types**
@@ -260,7 +260,7 @@ The custom deserializer is the most complex part of this task. It must handle th
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cargo test -p beacon-ir`
+Run: `cargo test -p fresnel-fir-ir`
 Expected: All 6 tests pass.
 
 **Step 5: Commit**
@@ -284,7 +284,7 @@ All 9 IR sections as Rust types.
 
 ```rust
 // crates/beacon-ir/tests/types_tests.rs
-use beacon_ir::types::BeaconIR;
+use fresnel_fir_ir::types::FresnelFirIR;
 
 #[test]
 fn test_parse_minimal_ir() {
@@ -324,7 +324,7 @@ fn test_parse_minimal_ir() {
             "event_hooks": { "mode": "function_intercept", "observe": [], "capture": [] }
         }
     });
-    let ir: BeaconIR = serde_json::from_value(json).unwrap();
+    let ir: FresnelFirIR = serde_json::from_value(json).unwrap();
     assert_eq!(ir.entities.len(), 1);
     assert!(ir.entities.contains_key("User"));
 }
@@ -335,8 +335,8 @@ fn test_parse_entity_fields() {
         "type": "enum",
         "values": ["admin", "member", "guest"]
     });
-    let field: beacon_ir::types::FieldDef = serde_json::from_value(json).unwrap();
-    assert!(matches!(field.field_type, beacon_ir::types::FieldType::Enum { .. }));
+    let field: fresnel_fir_ir::types::FieldDef = serde_json::from_value(json).unwrap();
+    assert!(matches!(field.field_type, fresnel_fir_ir::types::FieldType::Enum { .. }));
 }
 
 #[test]
@@ -356,8 +356,8 @@ fn test_parse_protocol_with_grammar_constructs() {
             ]
         }
     });
-    let proto: beacon_ir::types::Protocol = serde_json::from_value(json).unwrap();
-    assert!(matches!(proto.root, beacon_ir::types::ProtocolNode::Seq { .. }));
+    let proto: fresnel_fir_ir::types::Protocol = serde_json::from_value(json).unwrap();
+    assert!(matches!(proto.root, fresnel_fir_ir::types::ProtocolNode::Seq { .. }));
 }
 
 #[test]
@@ -368,7 +368,7 @@ fn test_parse_effect() {
             { "target": ["doc", "visibility"], "value": "private" }
         ]
     });
-    let effect: beacon_ir::types::Effect = serde_json::from_value(json).unwrap();
+    let effect: fresnel_fir_ir::types::Effect = serde_json::from_value(json).unwrap();
     assert!(effect.creates.is_some());
     assert_eq!(effect.sets.len(), 1);
 }
@@ -384,7 +384,7 @@ fn test_parse_action_binding() {
         "reads": [],
         "writes": ["Document"]
     });
-    let binding: beacon_ir::types::ActionBinding = serde_json::from_value(json).unwrap();
+    let binding: fresnel_fir_ir::types::ActionBinding = serde_json::from_value(json).unwrap();
     assert!(binding.mutates);
     assert!(!binding.idempotent);
 }
@@ -392,14 +392,14 @@ fn test_parse_action_binding() {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cargo test -p beacon-ir`
+Run: `cargo test -p fresnel-fir-ir`
 Expected: Compilation error — types don't exist yet.
 
 **Step 3: Implement all IR types**
 
 Implement in `crates/beacon-ir/src/types.rs`:
 
-- `BeaconIR` — top-level struct with all 9 sections
+- `FresnelFirIR` — top-level struct with all 9 sections
 - `Entity`, `FieldDef`, `FieldType` — entity definitions
 - `Refinement`, `FunctionDef` — refinement types + classified functions
 - `Protocol`, `ProtocolNode` (enum: `Seq`, `Alt`, `Repeat`, `Call`, `Ref`), `AltBranch` — protocol grammar
@@ -414,7 +414,7 @@ All types derive `Debug, Clone, Serialize, Deserialize`. Use `serde(rename_all =
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cargo test -p beacon-ir`
+Run: `cargo test -p fresnel-fir-ir`
 Expected: All tests pass.
 
 **Step 5: Commit**
@@ -443,7 +443,7 @@ Create `crates/beacon-ir/tests/fixtures/document_lifecycle.json` containing the 
 
 ```rust
 // crates/beacon-ir/tests/parse_tests.rs
-use beacon_ir::parse::parse_ir;
+use fresnel_fir_ir::parse::parse_ir;
 
 #[test]
 fn test_parse_full_ir_from_file() {
@@ -504,7 +504,7 @@ fn test_parse_empty_sections() {
 
 ```rust
 // crates/beacon-ir/src/parse.rs
-use crate::types::BeaconIR;
+use crate::types::FresnelFirIR;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
@@ -512,14 +512,14 @@ pub enum ParseError {
     Json(#[from] serde_json::Error),
 }
 
-pub fn parse_ir(json: &str) -> Result<BeaconIR, ParseError> {
+pub fn parse_ir(json: &str) -> Result<FresnelFirIR, ParseError> {
     Ok(serde_json::from_str(json)?)
 }
 ```
 
 **Step 4: Run tests**
 
-Run: `cargo test -p beacon-ir`
+Run: `cargo test -p fresnel-fir-ir`
 Expected: All tests pass.
 
 **Step 5: Commit**
@@ -543,8 +543,8 @@ Validate that a parsed IR is internally consistent.
 
 ```rust
 // crates/beacon-compiler/tests/validate_tests.rs
-use beacon_compiler::validate::{validate_ir, ValidationError};
-use beacon_ir::parse::parse_ir;
+use fresnel_fir_compiler::validate::{validate_ir, ValidationError};
+use fresnel_fir_ir::parse::parse_ir;
 
 #[test]
 fn test_valid_ir_passes() {
@@ -615,14 +615,14 @@ fn test_repeat_min_exceeds_max() {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cargo test -p beacon-compiler`
+Run: `cargo test -p fresnel-fir-compiler`
 Expected: Compilation error.
 
 **Step 3: Implement validation**
 
 ```rust
 // crates/beacon-compiler/src/validate.rs
-use beacon_ir::types::BeaconIR;
+use fresnel_fir_ir::types::FresnelFirIR;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
@@ -645,7 +645,7 @@ pub enum ValidationError {
     InvalidRepeatBounds { location: String, min: u32, max: u32 },
 }
 
-pub fn validate_ir(ir: &BeaconIR) -> Result<(), Vec<ValidationError>> {
+pub fn validate_ir(ir: &FresnelFirIR) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
     validate_entity_refs(ir, &mut errors);
     validate_protocol_actions(ir, &mut errors);
@@ -659,7 +659,7 @@ Implement each `validate_*` function to walk the IR and collect errors. Walk pro
 
 **Step 4: Run tests**
 
-Run: `cargo test -p beacon-compiler`
+Run: `cargo test -p fresnel-fir-compiler`
 Expected: All tests pass.
 
 **Step 5: Commit**
@@ -765,8 +765,8 @@ Recursively walk `ProtocolNode` tree:
 #[test]
 fn test_full_compilation_pipeline() {
     let json = include_str!("../../beacon-ir/tests/fixtures/document_lifecycle.json");
-    let ir = beacon_ir::parse::parse_ir(json).unwrap();
-    let result = beacon_compiler::compile(&ir);
+    let ir = fresnel_fir_ir::parse::parse_ir(json).unwrap();
+    let result = fresnel_fir_compiler::compile(&ir);
     assert!(result.is_ok());
     let compiled = result.unwrap();
     assert!(!compiled.graphs.is_empty());
@@ -785,7 +785,7 @@ pub struct CompiledIR {
     pub ir_hash: [u8; 32],
 }
 
-pub fn compile(ir: &BeaconIR) -> Result<CompiledIR, CompileError> {
+pub fn compile(ir: &FresnelFirIR) -> Result<CompiledIR, CompileError> {
     // 1. Validate
     validate_ir(ir).map_err(CompileError::Validation)?;
     // 2. Build type context
@@ -803,7 +803,7 @@ pub fn compile(ir: &BeaconIR) -> Result<CompiledIR, CompileError> {
 
 ## Layer 1: Model State + Property Checking
 
-### Task 1.1: Add beacon-model crate to workspace
+### Task 1.1: Add fresnel-fir-model crate to workspace
 
 Add `crates/beacon-model/` with CoW model state types (`ModelState`, `Entity`, `EntityInstance`), `fork()`, `snapshot()`, `rollback()`.
 
@@ -831,7 +831,7 @@ Walk NDA graph using model state + effects only. Produce coverage report. Detect
 
 ## Layer 2: WASM Sandbox + Verification Adapter
 
-### Task 2.1: Add beacon-sandbox and beacon-vif crates
+### Task 2.1: Add fresnel-fir-sandbox and fresnel-fir-vif crates
 
 Add wasmtime dependency. Create sandbox configuration types (memory limits, fuel, isolation).
 
@@ -861,7 +861,7 @@ Execute one action against loaded DUT: serialize args, call, capture response, a
 
 ### Task 3.1: Add solver dependency (z3-sys or varisat)
 
-Evaluate Z3 FFI vs varisat. Set up beacon-explore/solver module.
+Evaluate Z3 FFI vs varisat. Set up fresnel-fir-explore/solver module.
 
 ### Task 3.2: Domain encoding
 
@@ -937,7 +937,7 @@ Multiple traversal threads + coordinator thread + lockfree channels. Test determ
 
 ### Task 4.10: Campaign lifecycle
 
-Implement beacon_fuzz_start/status/findings/coverage/reproduce/abort. Integrate with MCP server.
+Implement fresnel_fir_fuzz_start/status/findings/coverage/reproduce/abort. Integrate with MCP server.
 
 ---
 

@@ -47,7 +47,7 @@ if [[ "${#source_files[@]}" -eq 0 ]]; then
 fi
 
 {
-  echo "# beacon installer manifest"
+  echo "# fresnel-fir installer manifest"
   echo "source=$source_dir"
   echo "destination=$destination_dir"
   echo "generated_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -2,7 +2,7 @@
 
 ## Supported scope
 
-Beacon is pre-1.0 and currently developed on `main`.
+FresnelFir is pre-1.0 and currently developed on `main`.
 
 - `main`: supported for security fixes.
 - Historical commits and unpublished snapshots: best effort only.

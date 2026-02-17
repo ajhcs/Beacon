@@ -44,7 +44,7 @@ Use fixture-driven tests to compare valid shape:
 ## WASM binding or execution failures
 
 Typical failures:
-- missing export name in module (`beacon-vif` interface validation error)
+- missing export name in module (`fresnel-fir-vif` interface validation error)
 - export exists but is not a function
 - parameter/return signature mismatch
 - fuel exhaustion during execution (timeout-like behavior)

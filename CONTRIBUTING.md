@@ -1,4 +1,4 @@
-# Contributing to Beacon
+# Contributing to FresnelFir
 
 Thanks for contributing. This repository is a Rust workspace; contributions should be small, focused, and test-backed.
 

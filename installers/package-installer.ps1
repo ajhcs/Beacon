@@ -35,7 +35,7 @@ if ($sourceFiles.Count -eq 0) {
 }
 
 $manifestLines = New-Object System.Collections.Generic.List[string]
-$manifestLines.Add("# beacon installer manifest")
+$manifestLines.Add("# fresnel-fir installer manifest")
 $manifestLines.Add("source=$sourceRoot")
 $manifestLines.Add("destination=$destinationRoot")
 $manifestLines.Add("generated_utc=$((Get-Date).ToUniversalTime().ToString('o'))")

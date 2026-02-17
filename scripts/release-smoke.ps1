@@ -15,7 +15,7 @@ function Run-Step {
     Invoke-Expression $Command
 }
 
-Write-Host "Beacon release smoke run starting..." -ForegroundColor Green
+Write-Host "FresnelFir release smoke run starting..." -ForegroundColor Green
 
 if (-not $SkipSecurity) {
     Write-Host ""

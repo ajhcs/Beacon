@@ -1,10 +1,10 @@
-# Beacon IR Schema Reference
+# FresnelFir IR Schema Reference
 
-This document defines the complete structure of a Beacon Declarative IR specification. AI agents use this schema to construct valid IR JSON for the Beacon verification harness.
+This document defines the complete structure of a FresnelFir Declarative IR specification. AI agents use this schema to construct valid IR JSON for the FresnelFir verification harness.
 
 ## Top-Level Structure
 
-A Beacon IR document is a JSON object with exactly 9 required top-level sections:
+A FresnelFir IR document is a JSON object with exactly 9 required top-level sections:
 
 ```json
 {
@@ -427,7 +427,7 @@ Expressions are JSON arrays with an operator tag as the first element.
 
 ## Validation Rules
 
-The Beacon compiler enforces these structural rules:
+The FresnelFir compiler enforces these structural rules:
 
 1. Every refinement's `base` must reference an existing entity.
 2. Every `Call` action in a protocol must have a matching entry in both `effects` and `bindings.actions`.
@@ -445,11 +445,11 @@ The Beacon compiler enforces these structural rules:
 
 After constructing the IR JSON, use these MCP tools:
 
-1. `beacon_compile` — Validate and compile the IR. Returns `campaign_id` + `budget`.
-2. `beacon_fuzz_start` — Start fuzzing against compiled spec.
-3. `beacon_fuzz_status` — Poll progress (state, iterations, coverage, findings).
-4. `beacon_findings` — Get findings, optionally incremental via `since_seqno`.
-5. `beacon_coverage` — Get coverage targets with hit/pending/unreachable status.
-6. `beacon_abort` — Abort a running campaign.
-7. `beacon_analytics` — Get campaign analytics (coverage curves, finding rates).
-8. `beacon_status` — Get engine-wide status.
+1. `fresnel_fir_compile` — Validate and compile the IR. Returns `campaign_id` + `budget`.
+2. `fresnel_fir_fuzz_start` — Start fuzzing against compiled spec.
+3. `fresnel_fir_fuzz_status` — Poll progress (state, iterations, coverage, findings).
+4. `fresnel_fir_findings` — Get findings, optionally incremental via `since_seqno`.
+5. `fresnel_fir_coverage` — Get coverage targets with hit/pending/unreachable status.
+6. `fresnel_fir_abort` — Abort a running campaign.
+7. `fresnel_fir_analytics` — Get campaign analytics (coverage curves, finding rates).
+8. `fresnel_fir_status` — Get engine-wide status.

@@ -1,0 +1,15 @@
+[package]
+name = "fresnel-fir-vif"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fresnel-fir-ir = { path = "../fresnel-fir-ir" }
+fresnel-fir-sandbox = { path = "../fresnel-fir-sandbox" }
+wasmtime.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+wat.workspace = true

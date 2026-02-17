@@ -1,0 +1,16 @@
+[package]
+name = "fresnel-fir-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fresnel-fir-ir = { path = "../fresnel-fir-ir" }
+fresnel-fir-compiler = { path = "../fresnel-fir-compiler" }
+fresnel-fir-model = { path = "../fresnel-fir-model" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

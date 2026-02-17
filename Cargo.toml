@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/beacon-ir",
-    "crates/beacon-compiler",
-    "crates/beacon-model",
-    "crates/beacon-sandbox",
-    "crates/beacon-vif",
-    "crates/beacon-explore",
-    "crates/beacon-core",
+    "crates/fresnel-fir-ir",
+    "crates/fresnel-fir-compiler",
+    "crates/fresnel-fir-model",
+    "crates/fresnel-fir-sandbox",
+    "crates/fresnel-fir-vif",
+    "crates/fresnel-fir-explore",
+    "crates/fresnel-fir-core",
 ]
 
 [workspace.package]

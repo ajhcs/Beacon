@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in Beacon.
+description: Report a reproducible problem in FresnelFir.
 title: "[Bug]: "
 labels:
   - bug
@@ -67,7 +67,7 @@ body:
       placeholder: |
         - OS:
         - Rust:
-        - Beacon commit/tag:
+        - FresnelFir commit/tag:
     validations:
       required: true
 

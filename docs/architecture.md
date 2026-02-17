@@ -1,18 +1,18 @@
-# Beacon architecture
+# FresnelFir architecture
 
 ## Purpose
 
-Beacon is a multi-crate Rust verification harness centered on a declarative IR. The system compiles IR into executable structures, explores protocol paths, executes bound DUT actions, and records coverage/findings.
+FresnelFir is a multi-crate Rust verification harness centered on a declarative IR. The system compiles IR into executable structures, explores protocol paths, executes bound DUT actions, and records coverage/findings.
 
 ## High-level flow
 
-1. Parse IR JSON into typed structures (`beacon-ir`).
-2. Validate and compile protocols/predicates (`beacon-compiler`).
-3. Prepare model state and property checks (`beacon-model`).
-4. Optionally load and isolate WASM DUT (`beacon-sandbox`).
-5. Map abstract actions to concrete exports (`beacon-vif`).
-6. Run traversal/solver/adaptation loops (`beacon-explore`).
-7. Track campaigns and expose MCP-style tool calls (`beacon-core`).
+1. Parse IR JSON into typed structures (`fresnel-fir-ir`).
+2. Validate and compile protocols/predicates (`fresnel-fir-compiler`).
+3. Prepare model state and property checks (`fresnel-fir-model`).
+4. Optionally load and isolate WASM DUT (`fresnel-fir-sandbox`).
+5. Map abstract actions to concrete exports (`fresnel-fir-vif`).
+6. Run traversal/solver/adaptation loops (`fresnel-fir-explore`).
+7. Track campaigns and expose MCP-style tool calls (`fresnel-fir-core`).
 
 ## Crate responsibilities
 
@@ -39,7 +39,7 @@ Beacon is a multi-crate Rust verification harness centered on a declarative IR. 
 
 ## Interfaces and boundaries
 
-- `beacon-core` does not currently expose a standalone server binary in this repository.
+- `fresnel-fir-core` does not currently expose a standalone server binary in this repository.
 - Integration is library-driven through crate APIs and tests.
 - MCP behavior is implemented as request/response handlers in `crates/beacon-core/src/mcp.rs`.
 

@@ -7,7 +7,7 @@ Release Target: `v0.1.0`
 | --- | --- | --- |
 | `cargo test --workspace` | PASS | Baseline tests pass. |
 | `cargo fmt --all -- --check` | FAIL | Format drift exists across multiple files. |
-| `cargo clippy --workspace --all-targets -- -D warnings` | FAIL | Lint blockers present in `beacon-sandbox` (known examples: `clone_on_copy`, `manual_div_ceil`). |
+| `cargo clippy --workspace --all-targets -- -D warnings` | FAIL | Lint blockers present in `fresnel-fir-sandbox` (known examples: `clone_on_copy`, `manual_div_ceil`). |
 
 ## Static Audit Baseline
 | Check | Result | Notes |

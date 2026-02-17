@@ -4,12 +4,12 @@
 **Estimated Complexity**: High
 
 ## Overview
-Prepare Beacon for its first public GitHub release (`v0.1.0`) using a gated release program that covers code examination, bug fixing, automated validation, documentation, CI/CD, and final user testing. The plan enforces measurable release gates and a strict blocker policy.
+Prepare FresnelFir for its first public GitHub release (`v0.1.0`) using a gated release program that covers code examination, bug fixing, automated validation, documentation, CI/CD, and final user testing. The plan enforces measurable release gates and a strict blocker policy.
 
 Observed baseline (from current repo state):
 - `cargo test --workspace` passes.
 - `cargo fmt --all -- --check` fails (format drift across many files).
-- `cargo clippy --workspace --all-targets -- -D warnings` fails with real lint blockers in `beacon-sandbox`.
+- `cargo clippy --workspace --all-targets -- -D warnings` fails with real lint blockers in `fresnel-fir-sandbox`.
 - Release assets missing: `README.md`, `LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.github/workflows/*`.
 - Known TODO in traversal path selection (`crates/beacon-explore/src/traversal/engine.rs`).
 
@@ -164,7 +164,7 @@ Observed baseline (from current repo state):
   - No behavior regression in sandbox tests.
 - **Validation**:
   - `cargo clippy --workspace --all-targets --locked -- -D warnings`
-  - `cargo test -p beacon-sandbox --locked`
+  - `cargo test -p fresnel-fir-sandbox --locked`
 
 ### Task 2.3: Resolve Traversal TODO or Formally Defer
 - **Location**: `crates/beacon-explore/src/traversal/engine.rs`, `docs/release/known-issues.md`
@@ -263,7 +263,7 @@ Observed baseline (from current repo state):
 - **Dependencies**: Task 1.1
 - **Acceptance Criteria**:
   - README supports fresh clone to successful test run.
-  - Includes "what Beacon is not" to avoid mis-scoped usage.
+  - Includes "what FresnelFir is not" to avoid mis-scoped usage.
 - **Validation**:
   - Fresh-environment walkthrough by non-author.
 

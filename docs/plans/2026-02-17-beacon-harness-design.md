@@ -1,4 +1,4 @@
-# Beacon: Self-Improving Verification Harness for AI-Assisted Software Development
+# FresnelFir: Self-Improving Verification Harness for AI-Assisted Software Development
 
 **Date:** 2026-02-17
 **Status:** Approved
@@ -10,7 +10,7 @@
 
 1. [System Architecture Overview](#1-system-architecture-overview)
 2. [Declarative IR Specification](#2-declarative-ir-specification)
-3. [Beacon Core — Rust Engine Architecture](#3-beacon-core--rust-engine-architecture)
+3. [FresnelFir Core — Rust Engine Architecture](#3-fresnelfir-core--rust-engine-architecture)
 4. [Claude Code Integration](#4-claude-code-integration)
 5. [The Self-Improvement Loop](#5-the-self-improvement-loop)
 6. [Build Sequence](#6-build-sequence)
@@ -19,13 +19,13 @@
 
 ## 1. System Architecture Overview
 
-Beacon is a self-improving verification system for AI-assisted software development. It ensures AI-generated code satisfies formally specified constraints through property-based simulation and runtime containment.
+FresnelFir is a self-improving verification system for AI-assisted software development. It ensures AI-generated code satisfies formally specified constraints through property-based simulation and runtime containment.
 
 ### Three Actors
 
 - **Human** — Provides intent, approves formal specs. Never touches code.
 - **AI Agent** (Claude) — Translates intent into formal specs via Socratic questioning. Generates code. Interprets failures and proposes fixes.
-- **Beacon Core** (Rust, native) — The puppet master. Compiles specs, directs exploration, enforces constraints, contains the DUT.
+- **FresnelFir Core** (Rust, native) — The puppet master. Compiles specs, directs exploration, enforces constraints, contains the DUT.
 
 ### Two Nested Loops
 
@@ -35,19 +35,19 @@ Beacon is a self-improving verification system for AI-assisted software developm
 Human intent
   -> AI: Socratic questioning (until confidence threshold met)
   -> Declarative IR (JSON) <- human approves
-  -> Beacon Core compiles IR -> State Machines + Refinement Types
+  -> FresnelFir Core compiles IR -> State Machines + Refinement Types
   [If compilation fails: AI revises IR -> human re-approves]
 ```
 
-**Inner loop — Verification** (Beacon Core + AI, autonomous):
+**Inner loop — Verification** (FresnelFir Core + AI, autonomous):
 
 ```
 AI generates code (DUT)
-  -> Beacon Core loads DUT into WASM sandbox
-  -> Beacon Core runs directed fuzzing against DUT
+  -> FresnelFir Core loads DUT into WASM sandbox
+  -> FresnelFir Core runs directed fuzzing against DUT
   -> Pass: verified software delivered
   -> Fail: failure report -> AI generates fix -> re-load -> re-verify
-  -> Beacon Core adapts exploration (see Adaptation Boundaries below)
+  -> FresnelFir Core adapts exploration (see Adaptation Boundaries below)
 ```
 
 The outer loop runs until the spec is stable. The inner loop runs until the code satisfies the spec. Humans participate in the outer loop only.
@@ -56,10 +56,10 @@ The outer loop runs until the spec is stable. The inner loop runs until the code
 
 These are distinct execution domains, following the traversal patent's separation:
 
-- **Test computation** (Beacon Core, native Rust): NDA traversal, state machine evaluation, constraint solving, Monte Carlo sampling, coverage tracking, adaptation directives. This is everything the verifier does *around* the DUT.
-- **DUT computation** (WASM sandbox): The AI-generated code under test. Receives stimuli from Beacon Core, produces outputs. Isolated. No access to the verification state.
+- **Test computation** (FresnelFir Core, native Rust): NDA traversal, state machine evaluation, constraint solving, Monte Carlo sampling, coverage tracking, adaptation directives. This is everything the verifier does *around* the DUT.
+- **DUT computation** (WASM sandbox): The AI-generated code under test. Receives stimuli from FresnelFir Core, produces outputs. Isolated. No access to the verification state.
 
-Beacon Core orchestrates test computation and injects it into the DUT's execution. The DUT never knows it's being tested — it just runs.
+FresnelFir Core orchestrates test computation and injects it into the DUT's execution. The DUT never knows it's being tested — it just runs.
 
 ### Adaptation Boundaries
 
@@ -81,12 +81,12 @@ The spec is immutable physics once the human approves it. Adaptation is strictly
 ### Concurrency Model
 
 - **NDA traversal threads** — Multiple NDA instances can run concurrently, each exploring different paths through the protocol graph. These are test computation threads, running natively.
-- **DUT thread** — The WASM sandbox runs in its own thread (or async task). Beacon Core's traversal threads coordinate stimuli to the DUT through a synchronized interface.
-- Traversal threads and the DUT thread never share memory directly. Communication is through Beacon Core's orchestration layer.
+- **DUT thread** — The WASM sandbox runs in its own thread (or async task). FresnelFir Core's traversal threads coordinate stimuli to the DUT through a synchronized interface.
+- Traversal threads and the DUT thread never share memory directly. Communication is through FresnelFir Core's orchestration layer.
 
 ### Integration
 
-Beacon Core is a single native Rust binary exposed to Claude Code via MCP server (stdio transport). A Claude Code plugin provides skills (Socratic workflow) and hooks (action interception).
+FresnelFir Core is a single native Rust binary exposed to Claude Code via MCP server (stdio transport). A Claude Code plugin provides skills (Socratic workflow) and hooks (action interception).
 
 ### Key Invariant
 
@@ -96,15 +96,15 @@ The AI never declares success. Only the Rust engine can promote code from "candi
 
 ## 2. Declarative IR Specification
 
-The Declarative IR is the single most important artifact in Beacon. It's the contract between human intent and machine enforcement — what the AI generates, what the human approves, and what the Rust engine treats as immutable law.
+The Declarative IR is the single most important artifact in FresnelFir. It's the contract between human intent and machine enforcement — what the AI generates, what the human approves, and what the Rust engine treats as immutable law.
 
-**Format:** JSON. Machine-generated by AI, machine-consumed by Beacon Core. Human review happens conversationally — the AI presents the spec in natural language; the human never reads raw JSON.
+**Format:** JSON. Machine-generated by AI, machine-consumed by FresnelFir Core. Human review happens conversationally — the AI presents the spec in natural language; the human never reads raw JSON.
 
 ### Nine Sections
 
 #### 2.1 Entities
 
-Domain objects with typed fields. These are the model's nouns — Beacon Core maintains its own model instances independently of the DUT.
+Domain objects with typed fields. These are the model's nouns — FresnelFir Core maintains its own model instances independently of the DUT.
 
 ```json
 {
@@ -176,7 +176,7 @@ Functions are classified as **derived** (pure, computed from model fields, can b
 }
 ```
 
-**Model Truth vs Observed Behavior:** Derived functions compute against Beacon's own model state — if `canAccess` says a user shouldn't access a document, that's model truth. Observer functions query the DUT — if `checkAccessDUT` disagrees with `canAccess`, that's a **discrepancy**, which is exactly what Beacon is looking for.
+**Model Truth vs Observed Behavior:** Derived functions compute against FresnelFir's own model state — if `canAccess` says a user shouldn't access a document, that's model truth. Observer functions query the DUT — if `checkAccessDUT` disagrees with `canAccess`, that's a **discrepancy**, which is exactly what FresnelFir is looking for.
 
 #### 2.3 Protocols
 
@@ -289,7 +289,7 @@ What actions do to **model state**. Without effects, the model can't track an ev
 }
 ```
 
-After each action, Beacon Core applies effects to its model, then checks invariants against the **model state** (not the DUT). Separately, it queries observers in the DUT and flags discrepancies between model truth and observed behavior.
+After each action, FresnelFir Core applies effects to its model, then checks invariants against the **model state** (not the DUT). Separately, it queries observers in the DUT and flags discrepancies between model truth and observed behavior.
 
 #### 2.5 Properties
 
@@ -481,7 +481,7 @@ Action metadata (`mutates`, `reads`, `writes`) makes temporal rules like `before
 
 - **Declarative, not procedural** — Says *what* must hold, not *how* to check it.
 - **Structured predicates** — JSON AST expressions, no string parsing, no custom parser, no risk of Turing-completeness.
-- **Model Truth vs Observed Behavior** — Derived functions compute against Beacon's model; observers query the DUT. Discrepancies between them are findings.
+- **Model Truth vs Observed Behavior** — Derived functions compute against FresnelFir's model; observers query the DUT. Discrepancies between them are findings.
 - **Bounded quantifiers** — `forall`/`exists` over finite model sets. Decidable and implementable.
 - **Function classification** — `derived` (pure, SMT-compatible) vs `observer` (DUT-calling, runtime-only). Explicit and enforced.
 - **Guards reference refinement types** — Keeping the spec DRY.
@@ -489,7 +489,7 @@ Action metadata (`mutates`, `reads`, `writes`) makes temporal rules like `before
 
 ---
 
-## 3. Beacon Core — Rust Engine Architecture
+## 3. FresnelFir Core — Rust Engine Architecture
 
 ### Crate Structure (MVP)
 
@@ -512,13 +512,13 @@ beacon/
       mcp/                  (internal module) MCP server for Claude Code
 ```
 
-When interfaces stabilize, `monitor` can split out of `beacon-core` and `traversal`/`solver` can split out of `beacon-explore`. Internal module boundaries make this a mechanical refactor.
+When interfaces stabilize, `monitor` can split out of `fresnel-fir-core` and `traversal`/`solver` can split out of `fresnel-fir-explore`. Internal module boundaries make this a mechanical refactor.
 
-### Phase 1: Compilation as Verification (`beacon-compiler`)
+### Phase 1: Compilation as Verification (`fresnel-fir-compiler`)
 
 The cheapest verification layer — catch problems before anything runs.
 
-**Step 1 — Parse.** Deserialize JSON IR via serde into typed AST (defined in `beacon-ir`). Malformed JSON fails here.
+**Step 1 — Parse.** Deserialize JSON IR via serde into typed AST (defined in `fresnel-fir-ir`). Malformed JSON fails here.
 
 **Step 2 — Structural validation.**
 
@@ -556,7 +556,7 @@ The cheapest verification layer — catch problems before anything runs.
 
 ### Phase 2: Directed Fuzzing — The Monte Carlo Engine
 
-#### Solver Engine (`beacon-explore/solver`)
+#### Solver Engine (`fresnel-fir-explore/solver`)
 
 Implements the fracture/solve/abort pipeline from the 2013/2017 patents. Runs in a **dedicated solver thread pool** (Rayon), never in the hot fuzzing loop.
 
@@ -583,7 +583,7 @@ Per-stage RNG seeding: each fracture stage has its own `ChaCha8Rng::seed_from(se
 
 Vectors are stored in a **lockfree queue**, indexed by coverage target. Traversal threads draw from the queue without blocking the solver.
 
-#### Traversal Engine (`beacon-explore/traversal`)
+#### Traversal Engine (`fresnel-fir-explore/traversal`)
 
 Implements the object stack + strategy stack from the 2008 patent.
 
@@ -620,7 +620,7 @@ The executor is dumb pipes. The strategy is the brain.
 12. Emit signals
 13. Process directives via coordinator
 
-### Phase 3: Sandboxed Execution — The WASM Container (`beacon-sandbox`)
+### Phase 3: Sandboxed Execution — The WASM Container (`fresnel-fir-sandbox`)
 
 Wasmtime configuration for the puppet-master relationship.
 
@@ -635,17 +635,17 @@ Wasmtime configuration for the puppet-master relationship.
 
 **Snapshot/restore:** Wasmtime supports instance snapshots. After running a generator sequence, snapshot the instance. Subsequent test vectors needing the same precondition restore from snapshot. **Critical: every WASM snapshot is paired with a model generation number. Restore atomically restores both WASM instance AND model state. If either fails, both roll back.**
 
-#### Verification Adapter Layer (`beacon-vif`)
+#### Verification Adapter Layer (`fresnel-fir-vif`)
 
 Auto-generated from IR bindings during compilation. Bridges the automata world and the DUT.
 
-- **Forward direction (Beacon -> DUT):** Action stubs serialize arguments, call WASM exports, deserialize returns
-- **Reverse direction (DUT -> Beacon):** Event interceptors at WASM host-call boundary emit action events for inverse monitoring
+- **Forward direction (FresnelFir -> DUT):** Action stubs serialize arguments, call WASM exports, deserialize returns
+- **Reverse direction (DUT -> FresnelFir):** Event interceptors at WASM host-call boundary emit action events for inverse monitoring
 - **Observer probes:** Call into DUT for observable state, tagged as `ObserverResult` (never confused with model truth)
-- **Type marshaling:** Between Beacon's model types and WASM's linear memory
+- **Type marshaling:** Between FresnelFir's model types and WASM's linear memory
 - **Interface validation:** At DUT load time, verify WASM module exports match declared bindings
 
-### Model State (`beacon-model`)
+### Model State (`fresnel-fir-model`)
 
 Copy-on-Write for efficient state forking:
 
@@ -706,21 +706,21 @@ Tokio never touches CPU-bound work. Rayon never touches async I/O.
 
 ### MCP Server Interface
 
-Beacon Core exposes itself to Claude Code as a stdio MCP server. All tools thread through a `campaign_id` to prevent cross-talk.
+FresnelFir Core exposes itself to Claude Code as a stdio MCP server. All tools thread through a `campaign_id` to prevent cross-talk.
 
 **Tool lifecycle:**
 
 ```
-beacon_compile(ir_json)
+fresnel_fir_compile(ir_json)
   -> { campaign_id, result: pass|errors, budget: { min_iterations, min_timeout } }
 
-beacon_load_dut(campaign_id, wasm_bytes)
+fresnel_fir_load_dut(campaign_id, wasm_bytes)
   -> { result: pass|errors, interface_check: { missing_exports, type_mismatches } }
 
-beacon_fuzz_start(campaign_id, extra_iterations?, concurrency_mode?)
+fresnel_fir_fuzz_start(campaign_id, extra_iterations?, concurrency_mode?)
   -> { status: "started", estimated_duration }
 
-beacon_fuzz_status(campaign_id)
+fresnel_fir_fuzz_status(campaign_id)
   -> {
       state: "running" | "complete" | "aborted",
       progress: { iterations_done, iterations_total, percent },
@@ -730,33 +730,33 @@ beacon_fuzz_status(campaign_id)
       findings_count: u32
     }
 
-beacon_findings(campaign_id, since_seqno?)
+fresnel_fir_findings(campaign_id, since_seqno?)
   -> {
       findings: [Finding],
       next_seqno: u64,
       total_findings: u32
     }
 
-beacon_reproduce(campaign_id, finding_id, mode?: "deterministic" | "verbose")
+fresnel_fir_reproduce(campaign_id, finding_id, mode?: "deterministic" | "verbose")
   -> {
       reproduced: bool,
       replay_capsule: ReplayCapsule,
       trace: [TraceEntry]
     }
 
-beacon_coverage(campaign_id)
+fresnel_fir_coverage(campaign_id)
   -> {
       targets: [{ target, status: "hit" | "pending" | "unreachable", hit_count }],
       summary: { hit, pending, unreachable, percent }
     }
 
-beacon_abort(campaign_id)
+fresnel_fir_abort(campaign_id)
   -> { final_status }
 ```
 
 ### Fuzzing Budget Control
 
-The AI does **not** control fuzzing parameters directly. Beacon Core computes minimums from IR complexity:
+The AI does **not** control fuzzing parameters directly. FresnelFir Core computes minimums from IR complexity:
 
 ```
 min_iterations = f(|states| x |transitions| x |input_domain_size| x |coverage_targets|)
@@ -787,7 +787,7 @@ ReplayCapsule {
 }
 ```
 
-`beacon_reproduce` runs in **single-thread deterministic mode by default**, regardless of the original campaign's concurrency mode.
+`fresnel_fir_reproduce` runs in **single-thread deterministic mode by default**, regardless of the original campaign's concurrency mode.
 
 ### The Socratic Workflow (Skill)
 
@@ -810,8 +810,8 @@ A Claude Code skill guides the AI through extracting formal constraints from hum
 Once the IR compiles, a second skill governs the inner loop:
 
 1. Compile DUT to WASM
-2. Load and fuzz (`beacon_load_dut` -> `beacon_fuzz_start`)
-3. Interpret findings (`beacon_findings` with incremental polling via `since_seqno`)
+2. Load and fuzz (`fresnel_fir_load_dut` -> `fresnel_fir_fuzz_start`)
+3. Interpret findings (`fresnel_fir_findings` with incremental polling via `since_seqno`)
 4. Fix and re-verify (address ALL findings, not just the first)
 5. Coverage check — only complete when all targets met AND zero findings
 
@@ -822,9 +822,9 @@ Once the IR compiles, a second skill governs the inner loop:
 **Stop hook (gate):** Blocks completion unless:
 
 - Active campaign exists
-- `beacon_fuzz_status` -> state == "complete"
-- `beacon_findings` -> total_findings == 0
-- `beacon_coverage` -> percent >= threshold
+- `fresnel_fir_fuzz_status` -> state == "complete"
+- `fresnel_fir_findings` -> total_findings == 0
+- `fresnel_fir_coverage` -> percent >= threshold
 
 ### AI Constraints
 
@@ -837,7 +837,7 @@ The AI **cannot**:
 - Adjust coverage targets
 - Set fuzzing iterations below the computed minimum
 
-The AI is a powerful code generator that proposes and fixes. Beacon is the judge. The human is the lawmaker.
+The AI is a powerful code generator that proposes and fixes. FresnelFir is the judge. The human is the lawmaker.
 
 ---
 
@@ -953,7 +953,7 @@ Progressive layers, each independently valuable.
 
 ### Layer 0: Foundation + IR Compiler
 
-**Crates:** `beacon-ir`, `beacon-compiler` (structural validation + predicate compilation)
+**Crates:** `fresnel-fir-ir`, `fresnel-fir-compiler` (structural validation + predicate compilation)
 
 **Delivers:**
 - Parse Declarative IR JSON into typed AST
@@ -965,13 +965,13 @@ Progressive layers, each independently valuable.
 
 **Milestone:** The outer loop (Socratic questioning -> IR -> compile -> revise) is functional. The AI can iterate on specs with the human before writing any code.
 
-**Claude Code integration:** Basic MCP server with `beacon_compile`. Socratic questioning skill.
+**Claude Code integration:** Basic MCP server with `fresnel_fir_compile`. Socratic questioning skill.
 
 **Scope:** ~2-3K lines of Rust.
 
 ### Layer 1: Model State + Property Checking
 
-**Crates:** `beacon-model`, `beacon-compiler` (extended)
+**Crates:** `fresnel-fir-model`, `fresnel-fir-compiler` (extended)
 
 **Delivers:**
 - CoW model state with snapshot/rollback
@@ -980,15 +980,15 @@ Progressive layers, each independently valuable.
 - Temporal property checking against action traces
 - Input space compilation, generator compilation
 
-**Milestone:** Beacon can simulate the protocol against its own model without a DUT. Catches spec-level bugs ("your invariant contradicts your effects").
+**Milestone:** FresnelFir can simulate the protocol against its own model without a DUT. Catches spec-level bugs ("your invariant contradicts your effects").
 
-**Claude Code integration:** `beacon_simulate` tool.
+**Claude Code integration:** `fresnel_fir_simulate` tool.
 
 **Scope:** ~2-3K lines.
 
 ### Layer 2: WASM Sandbox + Verification Adapter
 
-**Crates:** `beacon-sandbox`, `beacon-vif`
+**Crates:** `fresnel-fir-sandbox`, `fresnel-fir-vif`
 
 **Delivers:**
 - WASM loading via wasmtime with full isolation
@@ -1000,13 +1000,13 @@ Progressive layers, each independently valuable.
 
 **Milestone:** First time model truth meets observed behavior. Discrepancies are detectable. Puppet-master relationship established.
 
-**Claude Code integration:** `beacon_load_dut`, `beacon_execute_action`.
+**Claude Code integration:** `fresnel_fir_load_dut`, `fresnel_fir_execute_action`.
 
 **Scope:** ~2-3K lines.
 
 ### Layer 3: Solver + Vector Generation
 
-**Crates:** `beacon-explore` (solver module)
+**Crates:** `fresnel-fir-explore` (solver module)
 
 **Delivers:**
 - Input space fracturing
@@ -1018,13 +1018,13 @@ Progressive layers, each independently valuable.
 
 **Milestone:** Minimal non-redundant test vector generation from declared input spaces. Usable standalone as a test data generator.
 
-**Claude Code integration:** `beacon_generate_vectors`.
+**Claude Code integration:** `fresnel_fir_generate_vectors`.
 
 **Scope:** ~3-4K lines.
 
 ### Layer 4: Traversal Engine + Directed Fuzzing
 
-**Crates:** `beacon-explore` (traversal module), `beacon-core`
+**Crates:** `fresnel-fir-explore` (traversal module), `fresnel-fir-core`
 
 **Delivers:**
 - Object stack + strategy stack NDA traversal
@@ -1039,13 +1039,13 @@ Progressive layers, each independently valuable.
 
 **Milestone:** The full inner verification loop is operational. This is the core product.
 
-**Claude Code integration:** `beacon_fuzz_start`, `beacon_fuzz_status`, `beacon_findings`, `beacon_reproduce`, `beacon_coverage`, `beacon_abort`. Inner loop skill. Stop hook. Smoke-check hook.
+**Claude Code integration:** `fresnel_fir_fuzz_start`, `fresnel_fir_fuzz_status`, `fresnel_fir_findings`, `fresnel_fir_reproduce`, `fresnel_fir_coverage`, `fresnel_fir_abort`. Inner loop skill. Stop hook. Smoke-check hook.
 
 **Scope:** ~4-5K lines.
 
 ### Layer 5: Adaptation + Cross-Campaign Learning
 
-**Crates:** `beacon-core` (extended)
+**Crates:** `fresnel-fir-core` (extended)
 
 **Delivers:**
 - All signal -> directive adaptation rules

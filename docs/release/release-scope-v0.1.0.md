@@ -5,10 +5,10 @@ Release Owner: TBD
 Docs Reviewer: TBD
 
 ## Objective
-Ship Beacon `v0.1.0` as the first public GitHub release with reproducible quality gates, clear platform policy, and documented limitations.
+Ship FresnelFir `v0.1.0` as the first public GitHub release with reproducible quality gates, clear platform policy, and documented limitations.
 
 ## In Scope
-- Source release for current Beacon crates.
+- Source release for current FresnelFir crates.
 - Pre-built artifacts for Tier 1 platforms: `windows-latest`, `ubuntu-latest`.
 - Installer build/install path for Tier 1 platforms.
 - Release-program documentation under `docs/release/`.

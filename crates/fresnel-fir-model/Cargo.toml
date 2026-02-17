@@ -1,0 +1,11 @@
+[package]
+name = "fresnel-fir-model"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fresnel-fir-ir = { path = "../fresnel-fir-ir" }
+fresnel-fir-compiler = { path = "../fresnel-fir-compiler" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

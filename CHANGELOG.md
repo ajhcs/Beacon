@@ -14,7 +14,7 @@ The format is based on Keep a Changelog and this project targets Semantic Versio
 
 ### Planned
 
-- Rust workspace with seven crates: `beacon-ir`, `beacon-compiler`, `beacon-model`, `beacon-sandbox`, `beacon-vif`, `beacon-explore`, and `beacon-core`.
+- Rust workspace with seven crates: `fresnel-fir-ir`, `fresnel-fir-compiler`, `fresnel-fir-model`, `fresnel-fir-sandbox`, `fresnel-fir-vif`, `fresnel-fir-explore`, and `fresnel-fir-core`.
 - IR parsing and schema support with fixture coverage.
 - Structural validation and graph/predicate compilation pipeline.
 - Model execution engine with effects, invariants, and temporal checks.

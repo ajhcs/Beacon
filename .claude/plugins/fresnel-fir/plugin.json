@@ -1,0 +1,13 @@
+{
+  "name": "fresnel-fir",
+  "version": "0.1.0",
+  "description": "FresnelFir verification harness integration for Claude Code — Socratic spec extraction, verification loop, and quality gates.",
+  "skills": [
+    "skills/socratic-spec.md",
+    "skills/verification-loop.md"
+  ],
+  "hooks": [
+    "hooks/smoke-check.md",
+    "hooks/stop-gate.md"
+  ]
+}

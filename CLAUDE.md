@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Beacon is a self-improving verification harness for AI-assisted software development. It compiles declarative IR specifications into state machines and refinement types, then uses property-based fuzzing to verify AI-generated code running in a WASM sandbox. The system enforces formal constraints through directed exploration, adaptation, and runtime containment.
+FresnelFir is a self-improving verification harness for AI-assisted software development. It compiles declarative IR specifications into state machines and refinement types, then uses property-based fuzzing to verify AI-generated code running in a WASM sandbox. The system enforces formal constraints through directed exploration, adaptation, and runtime containment.
 
 ## Development Commands
 
@@ -18,9 +18,9 @@ cargo test
 
 **Test specific crate:**
 ```bash
-cargo test -p beacon-ir
-cargo test -p beacon-compiler
-cargo test -p beacon-model
+cargo test -p fresnel-fir-ir
+cargo test -p fresnel-fir-compiler
+cargo test -p fresnel-fir-model
 # etc.
 ```
 
@@ -38,29 +38,29 @@ cargo check
 
 **Cargo workspace** with progressive layers. Each layer is independently testable. All crates live in `crates/` subdirectory:
 
-- **beacon-ir** — Core IR types and expression AST. JSON-based declarative specification (entities, refinements, functions, protocols, effects, properties, generators, exploration config, inputs, bindings).
+- **fresnel-fir-ir** — Core IR types and expression AST. JSON-based declarative specification (entities, refinements, functions, protocols, effects, properties, generators, exploration config, inputs, bindings).
 
-- **beacon-compiler** — Validates and compiles the IR. Transforms into:
+- **fresnel-fir-compiler** — Validates and compiles the IR. Transforms into:
   - Expression predicates (type-checked, nesting depth ≤64)
   - Protocol state machines (sequences, alternatives, loops, calls, references)
   - Refinement type constraints
   - Execution graphs for traversal
 
-- **beacon-model** — Model state representation and mutation. Tracks entity instances, applies effect deltas, evaluates refinement predicates against current state. Feeds into constraint checking and symbolic analysis.
+- **fresnel-fir-model** — Model state representation and mutation. Tracks entity instances, applies effect deltas, evaluates refinement predicates against current state. Feeds into constraint checking and symbolic analysis.
 
-- **beacon-sandbox** — WASM runtime using Wasmtime. Loads DUT (Device Under Test) modules, manages execution isolation, injects stimuli from traversal engine, intercepts function calls, captures return values and side effects.
+- **fresnel-fir-sandbox** — WASM runtime using Wasmtime. Loads DUT (Device Under Test) modules, manages execution isolation, injects stimuli from traversal engine, intercepts function calls, captures return values and side effects.
 
-- **beacon-explore** — Fuzzing and traversal engine. Executes protocol state machines, manages exploration weights, tracks coverage, applies adaptation directives. Uses constraint solving (varisat or z3) for test vector generation. Rayon for parallel traversal.
+- **fresnel-fir-explore** — Fuzzing and traversal engine. Executes protocol state machines, manages exploration weights, tracks coverage, applies adaptation directives. Uses constraint solving (varisat or z3) for test vector generation. Rayon for parallel traversal.
 
-- **beacon-vif** — Verification infrastructure framework. MCP server (Tokio-based), JSON marshalling, campaign management, findings accumulation, analytics.
+- **fresnel-fir-vif** — Verification infrastructure framework. MCP server (Tokio-based), JSON marshalling, campaign management, findings accumulation, analytics.
 
-- **beacon-core** — Top-level binary entry point. Coordinates all layers: IR compilation → model setup → WASM loading → fuzzing execution → findings reporting.
+- **fresnel-fir-core** — Top-level binary entry point. Coordinates all layers: IR compilation → model setup → WASM loading → fuzzing execution → findings reporting.
 
 **Key directories:**
 - `crates/` — All Rust crates (source + tests)
 - `docs/plans/` — Implementation plan (layer-by-layer breakdown)
 - `docs/beacon-ir-schema.md` — Complete IR specification (human-readable reference)
-- `.claude/plugins/beacon/` — Claude Code plugin skills and hooks (Socratic workflow, smoke checks)
+- `.claude/plugins/fresnel-fir/` — Claude Code plugin skills and hooks (Socratic workflow, smoke checks)
 
 ## Key Configuration
 
@@ -74,7 +74,7 @@ cargo check
 **.gitignore:**
 - `/target` (build artifacts only)
 
-**Beacon IR Schema** (`docs/beacon-ir-schema.md`):
+**FresnelFir IR Schema** (`docs/beacon-ir-schema.md`):
 - 9 required top-level sections: entities, refinements, functions, protocols, effects, properties, generators, exploration, inputs, bindings
 - All sections required (use empty objects/arrays if unused)
 - Expression language: JSON arrays with operator tags (no string parsing)

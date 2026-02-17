@@ -1,0 +1,23 @@
+[package]
+name = "fresnel-fir-explore"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fresnel-fir-ir = { path = "../fresnel-fir-ir" }
+fresnel-fir-compiler = { path = "../fresnel-fir-compiler" }
+fresnel-fir-model = { path = "../fresnel-fir-model" }
+fresnel-fir-sandbox = { path = "../fresnel-fir-sandbox" }
+fresnel-fir-vif = { path = "../fresnel-fir-vif" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+varisat.workspace = true
+rayon.workspace = true
+crossbeam.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+wat.workspace = true

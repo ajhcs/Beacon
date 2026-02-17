@@ -4,7 +4,7 @@
 **Estimated Complexity**: High
 
 ## Overview
-Prepare Beacon for its first public GitHub release by running a structured readiness pass across code quality, bug fixing, automated testing, documentation, and final user validation. The plan is designed for small, committable increments and finishes with a tagged release and rollback-ready release process.
+Prepare FresnelFir for its first public GitHub release by running a structured readiness pass across code quality, bug fixing, automated testing, documentation, and final user validation. The plan is designed for small, committable increments and finishes with a tagged release and rollback-ready release process.
 
 Current baseline from repository examination:
 - `cargo test --workspace` passes.
