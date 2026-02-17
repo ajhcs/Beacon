@@ -43,7 +43,7 @@ Status: PASS
 - [x] Installer path validation has passing Tier 1 run evidence attached.
 
 ## G4: User Validation
-Owner: TBD
+Owner: Engineering + User (`ajhcs`)
 Evidence: `docs/release/final-triage.md`, `docs/release/rc2-evidence.md`
 Status: NOT STARTED
 
