@@ -112,11 +112,11 @@ fn compile_node(
         }
 
         ProtocolNode::Ref { protocol } => {
-            let referenced = all_protocols
-                .get(protocol)
-                .ok_or_else(|| ProtocolCompileError::UnknownProtocolRef {
+            let referenced = all_protocols.get(protocol).ok_or_else(|| {
+                ProtocolCompileError::UnknownProtocolRef {
                     name: protocol.clone(),
-                })?;
+                }
+            })?;
             compile_node(&referenced.root, ctx, all_protocols, graph)
         }
     }

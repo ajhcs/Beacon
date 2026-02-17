@@ -18,7 +18,11 @@ fn test_apply_create_effect() {
     state.set_field(&actor_id, "id", Value::String("user-123".to_string()));
 
     let result = apply_effect(&mut state, effect, &actor_id);
-    assert!(result.is_ok(), "apply_effect failed: {:?}", result.unwrap_err());
+    assert!(
+        result.is_ok(),
+        "apply_effect failed: {:?}",
+        result.unwrap_err()
+    );
 
     // Should have created a Document instance
     let docs = state.all_instances("Document");
@@ -26,8 +30,14 @@ fn test_apply_create_effect() {
 
     // Should have set owner_id, visibility, deleted
     let doc = &docs[0];
-    assert_eq!(doc.get_field("owner_id"), Some(&Value::String("user-123".to_string())));
-    assert_eq!(doc.get_field("visibility"), Some(&Value::String("private".to_string())));
+    assert_eq!(
+        doc.get_field("owner_id"),
+        Some(&Value::String("user-123".to_string()))
+    );
+    assert_eq!(
+        doc.get_field("visibility"),
+        Some(&Value::String("private".to_string()))
+    );
     assert_eq!(doc.get_field("deleted"), Some(&Value::Bool(false)));
 }
 
@@ -39,7 +49,12 @@ fn test_apply_set_effect() {
     // Setup: create a document via create_document effect
     let actor_id = state.create_instance("User");
     state.set_field(&actor_id, "id", Value::String("user-123".to_string()));
-    apply_effect(&mut state, ir.effects.get("create_document").unwrap(), &actor_id).unwrap();
+    apply_effect(
+        &mut state,
+        ir.effects.get("create_document").unwrap(),
+        &actor_id,
+    )
+    .unwrap();
 
     // Now apply "publish" effect which sets visibility to public
     let doc_id = state.all_instances("Document")[0].id.clone();
@@ -48,7 +63,10 @@ fn test_apply_set_effect() {
     assert!(result.is_ok());
 
     let doc = state.get_instance(&doc_id).unwrap();
-    assert_eq!(doc.get_field("visibility"), Some(&Value::String("public".to_string())));
+    assert_eq!(
+        doc.get_field("visibility"),
+        Some(&Value::String("public".to_string()))
+    );
 }
 
 #[test]
@@ -58,7 +76,12 @@ fn test_apply_delete_effect() {
 
     let actor_id = state.create_instance("User");
     state.set_field(&actor_id, "id", Value::String("user-123".to_string()));
-    apply_effect(&mut state, ir.effects.get("create_document").unwrap(), &actor_id).unwrap();
+    apply_effect(
+        &mut state,
+        ir.effects.get("create_document").unwrap(),
+        &actor_id,
+    )
+    .unwrap();
 
     let doc_id = state.all_instances("Document")[0].id.clone();
     apply_effect(&mut state, ir.effects.get("delete").unwrap(), &actor_id).unwrap();
@@ -74,7 +97,12 @@ fn test_apply_read_effect_is_noop() {
 
     let actor_id = state.create_instance("User");
     state.set_field(&actor_id, "id", Value::String("user-123".to_string()));
-    apply_effect(&mut state, ir.effects.get("create_document").unwrap(), &actor_id).unwrap();
+    apply_effect(
+        &mut state,
+        ir.effects.get("create_document").unwrap(),
+        &actor_id,
+    )
+    .unwrap();
 
     let _gen_before = state.generation();
     apply_effect(&mut state, ir.effects.get("read").unwrap(), &actor_id).unwrap();
@@ -82,7 +110,10 @@ fn test_apply_read_effect_is_noop() {
     // Actually, generation may still increase if apply_effect records the action
     // Just verify no field changes
     let doc = &state.all_instances("Document")[0];
-    assert_eq!(doc.get_field("visibility"), Some(&Value::String("private".to_string())));
+    assert_eq!(
+        doc.get_field("visibility"),
+        Some(&Value::String("private".to_string()))
+    );
 }
 
 #[test]
@@ -92,7 +123,12 @@ fn test_apply_archive_then_restore() {
 
     let actor_id = state.create_instance("User");
     state.set_field(&actor_id, "id", Value::String("user-123".to_string()));
-    apply_effect(&mut state, ir.effects.get("create_document").unwrap(), &actor_id).unwrap();
+    apply_effect(
+        &mut state,
+        ir.effects.get("create_document").unwrap(),
+        &actor_id,
+    )
+    .unwrap();
     apply_effect(&mut state, ir.effects.get("publish").unwrap(), &actor_id).unwrap();
 
     let doc_id = state.all_instances("Document")[0].id.clone();

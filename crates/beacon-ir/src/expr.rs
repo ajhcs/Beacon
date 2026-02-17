@@ -81,13 +81,17 @@ impl<'de> Deserialize<'de> for Expr {
 
 fn parse_expr_inner(value: &serde_json::Value, depth: usize) -> Result<Expr, String> {
     if depth > MAX_EXPR_DEPTH {
-        return Err(format!("expression nesting depth exceeds maximum of {MAX_EXPR_DEPTH}"));
+        return Err(format!(
+            "expression nesting depth exceeds maximum of {MAX_EXPR_DEPTH}"
+        ));
     }
     match value {
         // Literals: bool, number, string (non-array)
         serde_json::Value::Bool(b) => Ok(Expr::Literal(Literal::Bool(*b))),
         serde_json::Value::Number(n) => {
-            let i = n.as_i64().ok_or_else(|| format!("unsupported number: {n}"))?;
+            let i = n
+                .as_i64()
+                .ok_or_else(|| format!("unsupported number: {n}"))?;
             Ok(Expr::Literal(Literal::Int(i)))
         }
         serde_json::Value::String(s) => Ok(Expr::Literal(Literal::String(s.clone()))),
@@ -97,62 +101,111 @@ fn parse_expr_inner(value: &serde_json::Value, depth: usize) -> Result<Expr, Str
             if arr.is_empty() {
                 return Err("empty expression array".to_string());
             }
-            let tag = arr[0]
-                .as_str()
-                .ok_or_else(|| format!("first element of expression array must be a string, got: {:?}", arr[0]))?;
+            let tag = arr[0].as_str().ok_or_else(|| {
+                format!(
+                    "first element of expression array must be a string, got: {:?}",
+                    arr[0]
+                )
+            })?;
 
             match tag {
                 // Field access: ["field", entity, field_name]
                 "field" => {
                     if arr.len() != 3 {
-                        return Err(format!("field expression requires 3 elements, got {}", arr.len()));
+                        return Err(format!(
+                            "field expression requires 3 elements, got {}",
+                            arr.len()
+                        ));
                     }
-                    let entity = arr[1].as_str().ok_or("field entity must be a string")?.to_string();
-                    let field = arr[2].as_str().ok_or("field name must be a string")?.to_string();
+                    let entity = arr[1]
+                        .as_str()
+                        .ok_or("field entity must be a string")?
+                        .to_string();
+                    let field = arr[2]
+                        .as_str()
+                        .ok_or("field name must be a string")?
+                        .to_string();
                     Ok(Expr::Field { entity, field })
                 }
 
                 // Quantifiers: ["forall"|"exists", var, domain, body]
                 "forall" | "exists" => {
                     if arr.len() != 4 {
-                        return Err(format!("{tag} expression requires 4 elements, got {}", arr.len()));
+                        return Err(format!(
+                            "{tag} expression requires 4 elements, got {}",
+                            arr.len()
+                        ));
                     }
                     let kind = match tag {
                         "forall" => QuantifierKind::Forall,
                         "exists" => QuantifierKind::Exists,
                         _ => unreachable!(),
                     };
-                    let var = arr[1].as_str().ok_or("quantifier var must be a string")?.to_string();
-                    let domain = arr[2].as_str().ok_or("quantifier domain must be a string")?.to_string();
+                    let var = arr[1]
+                        .as_str()
+                        .ok_or("quantifier var must be a string")?
+                        .to_string();
+                    let domain = arr[2]
+                        .as_str()
+                        .ok_or("quantifier domain must be a string")?
+                        .to_string();
                     let body = Box::new(parse_expr_inner(&arr[3], depth + 1)?);
-                    Ok(Expr::Quantifier { kind, var, domain, body })
+                    Ok(Expr::Quantifier {
+                        kind,
+                        var,
+                        domain,
+                        body,
+                    })
                 }
 
                 // Function calls: ["derived"|"observer", name, ...args]
                 "derived" | "observer" => {
                     if arr.len() < 3 {
-                        return Err(format!("{tag} expression requires at least 3 elements, got {}", arr.len()));
+                        return Err(format!(
+                            "{tag} expression requires at least 3 elements, got {}",
+                            arr.len()
+                        ));
                     }
                     let classification = match tag {
                         "derived" => FnClassification::Derived,
                         "observer" => FnClassification::Observer,
                         _ => unreachable!(),
                     };
-                    let name = arr[1].as_str().ok_or("function name must be a string")?.to_string();
+                    let name = arr[1]
+                        .as_str()
+                        .ok_or("function name must be a string")?
+                        .to_string();
                     let args = arr[2..]
                         .iter()
-                        .map(|v| v.as_str().ok_or("function arg must be a string").map(|s| s.to_string()))
+                        .map(|v| {
+                            v.as_str()
+                                .ok_or("function arg must be a string")
+                                .map(|s| s.to_string())
+                        })
                         .collect::<Result<Vec<_>, _>>()?;
-                    Ok(Expr::FnCall { classification, name, args })
+                    Ok(Expr::FnCall {
+                        classification,
+                        name,
+                        args,
+                    })
                 }
 
                 // Is expression: ["is", entity, refinement, {params}]
                 "is" => {
                     if arr.len() < 3 || arr.len() > 4 {
-                        return Err(format!("is expression requires 3-4 elements, got {}", arr.len()));
+                        return Err(format!(
+                            "is expression requires 3-4 elements, got {}",
+                            arr.len()
+                        ));
                     }
-                    let entity = arr[1].as_str().ok_or("is entity must be a string")?.to_string();
-                    let refinement = arr[2].as_str().ok_or("is refinement must be a string")?.to_string();
+                    let entity = arr[1]
+                        .as_str()
+                        .ok_or("is entity must be a string")?
+                        .to_string();
+                    let refinement = arr[2]
+                        .as_str()
+                        .ok_or("is refinement must be a string")?
+                        .to_string();
                     let params = if arr.len() == 4 {
                         let obj = arr[3].as_object().ok_or("is params must be an object")?;
                         obj.iter()
@@ -165,7 +218,11 @@ fn parse_expr_inner(value: &serde_json::Value, depth: usize) -> Result<Expr, Str
                     } else {
                         std::collections::HashMap::new()
                     };
-                    Ok(Expr::Is { entity, refinement, params })
+                    Ok(Expr::Is {
+                        entity,
+                        refinement,
+                        params,
+                    })
                 }
 
                 // Operators: ["eq"|"neq"|"and"|"or"|"not"|"implies"|"lt"|"lte"|"gt"|"gte", ...args]
@@ -188,18 +245,29 @@ fn parse_expr_inner(value: &serde_json::Value, depth: usize) -> Result<Expr, Str
                     match op {
                         OpKind::Not => {
                             if arg_count != 1 {
-                                return Err(format!("'not' requires exactly 1 argument, got {arg_count}"));
+                                return Err(format!(
+                                    "'not' requires exactly 1 argument, got {arg_count}"
+                                ));
                             }
                         }
-                        OpKind::Eq | OpKind::Neq | OpKind::Implies
-                        | OpKind::Lt | OpKind::Lte | OpKind::Gt | OpKind::Gte => {
+                        OpKind::Eq
+                        | OpKind::Neq
+                        | OpKind::Implies
+                        | OpKind::Lt
+                        | OpKind::Lte
+                        | OpKind::Gt
+                        | OpKind::Gte => {
                             if arg_count != 2 {
-                                return Err(format!("'{tag}' requires exactly 2 arguments, got {arg_count}"));
+                                return Err(format!(
+                                    "'{tag}' requires exactly 2 arguments, got {arg_count}"
+                                ));
                             }
                         }
                         OpKind::And | OpKind::Or => {
                             if arg_count < 1 {
-                                return Err(format!("'{tag}' requires at least 1 argument, got {arg_count}"));
+                                return Err(format!(
+                                    "'{tag}' requires at least 1 argument, got {arg_count}"
+                                ));
                             }
                         }
                     }

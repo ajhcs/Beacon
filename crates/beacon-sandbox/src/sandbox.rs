@@ -1,4 +1,4 @@
-use wasmtime::{Engine, Linker, Module, Store, Val, ExternType};
+use wasmtime::{Engine, ExternType, Linker, Module, Store, Val};
 
 use crate::config::SandboxConfig;
 
@@ -203,7 +203,11 @@ impl Sandbox {
 impl SandboxInstance {
     /// Call an exported function by name with the given arguments.
     /// Returns the result values, or an error if the call fails.
-    pub fn call_func(&mut self, name: &str, args: &[WasmVal]) -> Result<Vec<WasmVal>, SandboxError> {
+    pub fn call_func(
+        &mut self,
+        name: &str,
+        args: &[WasmVal],
+    ) -> Result<Vec<WasmVal>, SandboxError> {
         // Reset fuel before each action
         if let Some(fuel) = self.fuel_per_action {
             self.store.set_fuel(fuel)?;
@@ -220,7 +224,7 @@ impl SandboxInstance {
         let result_count = func_ty.results().len();
 
         // Convert WasmVal args to wasmtime Val
-        let wasm_args: Vec<Val> = args.iter().map(|a| a.0.clone()).collect();
+        let wasm_args: Vec<Val> = args.iter().map(|a| a.0).collect();
 
         // Prepare result buffer
         let mut results = vec![Val::I32(0); result_count];

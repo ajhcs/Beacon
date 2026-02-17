@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use beacon_ir::types::{CoverageTarget, DomainType, InputSpace};
 
 use super::constraint::{encode_constraints, CnfClauses};
-use super::domain::{encode_input_space, EncodedInputSpace, lit_for_value};
+use super::domain::{encode_input_space, lit_for_value, EncodedInputSpace};
 use super::search::{find_many, SearchError};
 use super::{DomainValue, TestVector};
 
@@ -25,10 +25,7 @@ pub enum CoveragePoint {
         val2: DomainValue,
     },
     /// A boundary value for a domain.
-    Boundary {
-        var: String,
-        value: DomainValue,
-    },
+    Boundary { var: String, value: DomainValue },
 }
 
 /// Result of coverage-driven generation.
@@ -45,10 +42,7 @@ pub struct CoverageResult {
 }
 
 /// Generate all-pairs coverage targets for the given variables.
-pub fn all_pairs_targets(
-    input_space: &InputSpace,
-    variables: &[String],
-) -> Vec<CoveragePoint> {
+pub fn all_pairs_targets(input_space: &InputSpace, variables: &[String]) -> Vec<CoveragePoint> {
     let mut targets = Vec::new();
 
     for i in 0..variables.len() {
@@ -149,10 +143,7 @@ pub fn extract_targets(input_space: &InputSpace) -> Vec<CoveragePoint> {
 }
 
 /// Check which coverage points a set of vectors covers.
-pub fn check_coverage(
-    vectors: &[TestVector],
-    targets: &[CoveragePoint],
-) -> HashSet<CoveragePoint> {
+pub fn check_coverage(vectors: &[TestVector], targets: &[CoveragePoint]) -> HashSet<CoveragePoint> {
     let mut covered = HashSet::new();
 
     for target in targets {
@@ -258,9 +249,7 @@ fn point_to_clauses(
 /// 3. Check which targets are covered.
 /// 4. For uncovered targets, generate targeted vectors.
 /// 5. Return combined vectors + coverage report.
-pub fn coverage_driven_generation(
-    input_space: &InputSpace,
-) -> Result<CoverageResult, SearchError> {
+pub fn coverage_driven_generation(input_space: &InputSpace) -> Result<CoverageResult, SearchError> {
     let encoded = encode_input_space(input_space)?;
     let constraint_clauses = encode_constraints(&input_space.constraints, &encoded)?;
     let targets = extract_targets(input_space);
@@ -309,9 +298,10 @@ fn domain_values(input_space: &InputSpace, var: &str) -> Vec<DomainValue> {
     if let Some(domain) = input_space.domains.get(var) {
         match &domain.domain_type {
             DomainType::Bool => vec![DomainValue::Bool(false), DomainValue::Bool(true)],
-            DomainType::Enum { values } => {
-                values.iter().map(|v| DomainValue::Enum(v.clone())).collect()
-            }
+            DomainType::Enum { values } => values
+                .iter()
+                .map(|v| DomainValue::Enum(v.clone()))
+                .collect(),
             DomainType::Int { min, max } => (*min..=*max).map(DomainValue::Int).collect(),
         }
     } else {
@@ -362,15 +352,15 @@ mod tests {
         );
         domains.insert(
             "owner".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let input_space = make_input_space(domains, vec![], vec![]);
 
-        let targets = all_pairs_targets(
-            &input_space,
-            &["role".into(), "vis".into(), "owner".into()],
-        );
+        let targets =
+            all_pairs_targets(&input_space, &["role".into(), "vis".into(), "owner".into()]);
 
         // role x vis = 3*2 = 6
         // role x owner = 3*2 = 6
@@ -394,7 +384,11 @@ mod tests {
         let targets = boundary_targets(
             &input_space,
             "count",
-            &[serde_json::json!(1), serde_json::json!(2), serde_json::json!(8)],
+            &[
+                serde_json::json!(1),
+                serde_json::json!(2),
+                serde_json::json!(8),
+            ],
         );
 
         // Explicit: 1, 2, 8
@@ -463,7 +457,9 @@ mod tests {
         );
         domains.insert(
             "owner".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let coverage_targets = vec![CoverageTarget::AllPairs {
@@ -523,7 +519,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let constraints = vec![InputConstraint {

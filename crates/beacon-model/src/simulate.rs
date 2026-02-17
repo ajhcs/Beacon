@@ -43,12 +43,11 @@ pub fn simulate(
     state: &mut ModelState,
     config: &SimulationConfig,
 ) -> Result<SimulationResult, SimulationError> {
-    let protocol = ir
-        .protocols
-        .get(&config.protocol_name)
-        .ok_or_else(|| SimulationError::ProtocolNotFound {
+    let protocol = ir.protocols.get(&config.protocol_name).ok_or_else(|| {
+        SimulationError::ProtocolNotFound {
             name: config.protocol_name.clone(),
-        })?;
+        }
+    })?;
 
     let mut result = SimulationResult {
         steps_executed: 0,

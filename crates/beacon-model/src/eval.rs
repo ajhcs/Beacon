@@ -36,17 +36,19 @@ pub fn eval_in_model(
         CompiledExpr::Literal(v) => Ok(compiler_value_to_model_value(v)),
 
         CompiledExpr::Field { entity, field } => {
-            let instance_id = bindings.get(entity).ok_or_else(|| {
-                ModelEvalError::UnboundVariable {
-                    var: entity.clone(),
-                }
-            })?;
-            let instance = state.get_instance(instance_id).ok_or_else(|| {
-                ModelEvalError::FieldNotFound {
-                    entity: entity.clone(),
-                    field: field.clone(),
-                }
-            })?;
+            let instance_id =
+                bindings
+                    .get(entity)
+                    .ok_or_else(|| ModelEvalError::UnboundVariable {
+                        var: entity.clone(),
+                    })?;
+            let instance =
+                state
+                    .get_instance(instance_id)
+                    .ok_or_else(|| ModelEvalError::FieldNotFound {
+                        entity: entity.clone(),
+                        field: field.clone(),
+                    })?;
             instance
                 .get_field(field)
                 .cloned()

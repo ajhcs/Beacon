@@ -51,6 +51,7 @@ pub struct CampaignResult {
 }
 
 /// Run a single-threaded campaign: create engine per pass, aggregate results.
+#[allow(clippy::too_many_arguments)]
 pub fn run_campaign<V: VectorSource, E: ActionExecutor>(
     graph: &NdaGraph,
     model: &mut ModelState,

@@ -30,7 +30,10 @@ fn test_single_call_produces_start_terminal_end() {
     let graph = compile_protocol(&proto, &ctx, &protocols).unwrap();
     // Should have: Start -> Terminal(read) -> End
     assert!(graph.nodes.len() >= 3);
-    assert!(matches!(graph.nodes[graph.entry as usize], GraphNode::Start));
+    assert!(matches!(
+        graph.nodes[graph.entry as usize],
+        GraphNode::Start
+    ));
     assert!(matches!(graph.nodes[graph.exit as usize], GraphNode::End));
     // Find the terminal node
     let terminals: Vec<_> = graph
@@ -69,7 +72,10 @@ fn test_seq_chains_nodes() {
     // Verify they're connected in sequence via edges
     let (create_id, _) = terminals[0];
     let (read_id, _) = terminals[1];
-    assert!(graph.edges.iter().any(|(from, to)| *from == create_id as u32 && *to == read_id as u32));
+    assert!(graph
+        .edges
+        .iter()
+        .any(|(from, to)| *from == create_id as u32 && *to == read_id as u32));
 }
 
 #[test]
@@ -164,6 +170,9 @@ fn test_full_document_lifecycle_compiles() {
     // Sanity checks on the compiled graph
     assert!(graph.nodes.len() > 5);
     assert!(!graph.edges.is_empty());
-    assert!(matches!(graph.nodes[graph.entry as usize], GraphNode::Start));
+    assert!(matches!(
+        graph.nodes[graph.entry as usize],
+        GraphNode::Start
+    ));
     assert!(matches!(graph.nodes[graph.exit as usize], GraphNode::End));
 }

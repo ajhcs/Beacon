@@ -39,9 +39,24 @@ fn test_valid_interface() {
         ("delete_document".to_string(), "func".to_string()),
     ];
     let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-        ("read", "get_document", vec!["actor_id", "doc_id"], "Document"),
-        ("delete", "delete_document", vec!["actor_id", "doc_id"], "void"),
+        (
+            "create_document",
+            "create_document",
+            vec!["actor_id"],
+            "Document",
+        ),
+        (
+            "read",
+            "get_document",
+            vec!["actor_id", "doc_id"],
+            "Document",
+        ),
+        (
+            "delete",
+            "delete_document",
+            vec!["actor_id", "doc_id"],
+            "void",
+        ),
     ]);
 
     let result = validate_interface(&exports, &bindings);
@@ -55,8 +70,18 @@ fn test_missing_export() {
         // get_document is MISSING
     ];
     let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-        ("read", "get_document", vec!["actor_id", "doc_id"], "Document"),
+        (
+            "create_document",
+            "create_document",
+            vec!["actor_id"],
+            "Document",
+        ),
+        (
+            "read",
+            "get_document",
+            vec!["actor_id", "doc_id"],
+            "Document",
+        ),
     ]);
 
     let result = validate_interface(&exports, &bindings);
@@ -77,8 +102,18 @@ fn test_wrong_export_kind() {
         ("get_document".to_string(), "memory".to_string()), // wrong kind!
     ];
     let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-        ("read", "get_document", vec!["actor_id", "doc_id"], "Document"),
+        (
+            "create_document",
+            "create_document",
+            vec!["actor_id"],
+            "Document",
+        ),
+        (
+            "read",
+            "get_document",
+            vec!["actor_id", "doc_id"],
+            "Document",
+        ),
     ]);
 
     let result = validate_interface(&exports, &bindings);
@@ -94,9 +129,24 @@ fn test_wrong_export_kind() {
 fn test_multiple_missing_exports() {
     let exports = vec![];
     let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-        ("read", "get_document", vec!["actor_id", "doc_id"], "Document"),
-        ("delete", "delete_document", vec!["actor_id", "doc_id"], "void"),
+        (
+            "create_document",
+            "create_document",
+            vec!["actor_id"],
+            "Document",
+        ),
+        (
+            "read",
+            "get_document",
+            vec!["actor_id", "doc_id"],
+            "Document",
+        ),
+        (
+            "delete",
+            "delete_document",
+            vec!["actor_id", "doc_id"],
+            "void",
+        ),
     ]);
 
     let result = validate_interface(&exports, &bindings);
@@ -113,9 +163,24 @@ fn test_signature_validation_matches() {
     sigs.insert("delete_document".to_string(), (2, 0));
 
     let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-        ("read", "get_document", vec!["actor_id", "doc_id"], "Document"),
-        ("delete", "delete_document", vec!["actor_id", "doc_id"], "void"),
+        (
+            "create_document",
+            "create_document",
+            vec!["actor_id"],
+            "Document",
+        ),
+        (
+            "read",
+            "get_document",
+            vec!["actor_id", "doc_id"],
+            "Document",
+        ),
+        (
+            "delete",
+            "delete_document",
+            vec!["actor_id", "doc_id"],
+            "void",
+        ),
     ]);
 
     let result = validate_signatures(&sigs, &bindings);
@@ -129,16 +194,23 @@ fn test_signature_param_mismatch() {
     let mut sigs = HashMap::new();
     sigs.insert("create_document".to_string(), (2usize, 1usize)); // expects 1 param, has 2
 
-    let bindings = make_bindings(vec![
-        ("create_document", "create_document", vec!["actor_id"], "Document"),
-    ]);
+    let bindings = make_bindings(vec![(
+        "create_document",
+        "create_document",
+        vec!["actor_id"],
+        "Document",
+    )]);
 
     let result = validate_signatures(&sigs, &bindings);
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| matches!(
         e,
-        InterfaceError::ParamCountMismatch { expected_params: 1, found_params: 2, .. }
+        InterfaceError::ParamCountMismatch {
+            expected_params: 1,
+            found_params: 2,
+            ..
+        }
     )));
 }
 
@@ -147,15 +219,22 @@ fn test_signature_return_mismatch() {
     let mut sigs = HashMap::new();
     sigs.insert("delete_document".to_string(), (2usize, 1usize)); // expects 0 returns (void), has 1
 
-    let bindings = make_bindings(vec![
-        ("delete", "delete_document", vec!["actor_id", "doc_id"], "void"),
-    ]);
+    let bindings = make_bindings(vec![(
+        "delete",
+        "delete_document",
+        vec!["actor_id", "doc_id"],
+        "void",
+    )]);
 
     let result = validate_signatures(&sigs, &bindings);
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| matches!(
         e,
-        InterfaceError::ReturnCountMismatch { expected_returns: 0, found_returns: 1, .. }
+        InterfaceError::ReturnCountMismatch {
+            expected_returns: 0,
+            found_returns: 1,
+            ..
+        }
     )));
 }

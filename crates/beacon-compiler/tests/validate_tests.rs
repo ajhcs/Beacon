@@ -19,7 +19,8 @@ fn minimal_ir_json(overrides: &str) -> String {
     // Merge by parsing both as serde_json::Value
     let mut base_val: serde_json::Value = serde_json::from_str(base).unwrap();
     let overrides_val: serde_json::Value = serde_json::from_str(overrides).unwrap();
-    if let (Some(base_obj), Some(over_obj)) = (base_val.as_object_mut(), overrides_val.as_object()) {
+    if let (Some(base_obj), Some(over_obj)) = (base_val.as_object_mut(), overrides_val.as_object())
+    {
         for (k, v) in over_obj {
             base_obj.insert(k.clone(), v.clone());
         }
@@ -32,29 +33,38 @@ fn test_valid_ir_passes() {
     let json = include_str!("../../beacon-ir/tests/fixtures/document_lifecycle.json");
     let ir = parse_ir(json).unwrap();
     let result = validate_ir(&ir);
-    assert!(result.is_ok(), "Expected valid IR to pass validation, got: {:?}", result.unwrap_err());
+    assert!(
+        result.is_ok(),
+        "Expected valid IR to pass validation, got: {:?}",
+        result.unwrap_err()
+    );
 }
 
 #[test]
 fn test_dangling_entity_ref_in_refinement() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "refinements": {
             "BadRef": {
                 "base": "Ghost",
                 "predicate": true
             }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::DanglingEntityRef { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::DanglingEntityRef { .. })));
 }
 
 #[test]
 fn test_action_without_effect() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "entities": {
             "User": { "fields": { "id": { "type": "string" } } }
         },
@@ -80,17 +90,21 @@ fn test_action_without_effect() {
             },
             "event_hooks": { "mode": "function_intercept", "observe": [], "capture": [] }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::MissingEffect { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::MissingEffect { .. })));
 }
 
 #[test]
 fn test_action_without_binding() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "entities": {
             "User": { "fields": { "id": { "type": "string" } } }
         },
@@ -108,33 +122,41 @@ fn test_action_without_binding() {
             "actions": {},
             "event_hooks": { "mode": "function_intercept", "observe": [], "capture": [] }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::MissingBinding { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::MissingBinding { .. })));
 }
 
 #[test]
 fn test_dangling_protocol_ref() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "protocols": {
             "test_proto": {
                 "root": { "type": "ref", "protocol": "nonexistent" }
             }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::DanglingProtocolRef { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::DanglingProtocolRef { .. })));
 }
 
 #[test]
 fn test_alt_all_zero_weights() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "protocols": {
             "test_proto": {
                 "root": {
@@ -159,17 +181,21 @@ fn test_alt_all_zero_weights() {
             },
             "event_hooks": { "mode": "function_intercept", "observe": [], "capture": [] }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::AllZeroWeights { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::AllZeroWeights { .. })));
 }
 
 #[test]
 fn test_repeat_min_exceeds_max() {
-    let json = minimal_ir_json(r#"{
+    let json = minimal_ir_json(
+        r#"{
         "protocols": {
             "test_proto": {
                 "root": {
@@ -191,10 +217,13 @@ fn test_repeat_min_exceeds_max() {
             },
             "event_hooks": { "mode": "function_intercept", "observe": [], "capture": [] }
         }
-    }"#);
+    }"#,
+    );
     let ir = parse_ir(&json).unwrap();
     let result = validate_ir(&ir);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e, ValidationError::InvalidRepeatBounds { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e, ValidationError::InvalidRepeatBounds { .. })));
 }

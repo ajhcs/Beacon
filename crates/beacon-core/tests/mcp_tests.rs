@@ -44,10 +44,7 @@ fn test_tools_list() {
     let resp = handle_request(&req, &state);
     let tools = resp["result"]["tools"].as_array().unwrap();
 
-    let tool_names: Vec<&str> = tools
-        .iter()
-        .map(|t| t["name"].as_str().unwrap())
-        .collect();
+    let tool_names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     assert!(tool_names.contains(&"beacon_compile"));
     assert!(tool_names.contains(&"beacon_status"));
     assert!(tool_names.contains(&"beacon_fuzz_start"));

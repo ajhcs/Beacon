@@ -44,9 +44,11 @@ fn test_compile_field_access() {
 #[test]
 fn test_compile_eq_expression() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["eq", ["field", "self", "visibility"], "public"]
-    ))
+    let expr: Expr = serde_json::from_value(serde_json::json!([
+        "eq",
+        ["field", "self", "visibility"],
+        "public"
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -63,19 +65,13 @@ fn test_compile_eq_expression() {
 #[test]
 fn test_compile_and_expression() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["and", true, true]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["and", true, true])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let env = ValueEnv::new();
     let result = eval_expr(&compiled, &env).unwrap();
     assert_eq!(result, Value::Bool(true));
 
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["and", true, false]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["and", true, false])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let result = eval_expr(&compiled, &env).unwrap();
     assert_eq!(result, Value::Bool(false));
@@ -84,10 +80,7 @@ fn test_compile_and_expression() {
 #[test]
 fn test_compile_or_expression() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["or", false, true]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["or", false, true])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let env = ValueEnv::new();
     let result = eval_expr(&compiled, &env).unwrap();
@@ -97,10 +90,7 @@ fn test_compile_or_expression() {
 #[test]
 fn test_compile_not_expression() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["not", false]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["not", false])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let env = ValueEnv::new();
     let result = eval_expr(&compiled, &env).unwrap();
@@ -110,9 +100,11 @@ fn test_compile_not_expression() {
 #[test]
 fn test_compile_neq_expression() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["neq", ["field", "actor", "role"], "guest"]
-    ))
+    let expr: Expr = serde_json::from_value(serde_json::json!([
+        "neq",
+        ["field", "actor", "role"],
+        "guest"
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -130,20 +122,14 @@ fn test_compile_neq_expression() {
 fn test_compile_implies_expression() {
     let ctx = make_test_context();
     // implies(false, anything) = true
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["implies", false, false]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["implies", false, false])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let env = ValueEnv::new();
     let result = eval_expr(&compiled, &env).unwrap();
     assert_eq!(result, Value::Bool(true));
 
     // implies(true, false) = false
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["implies", true, false]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["implies", true, false])).unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let result = eval_expr(&compiled, &env).unwrap();
     assert_eq!(result, Value::Bool(false));
@@ -153,16 +139,20 @@ fn test_compile_implies_expression() {
 fn test_compile_complex_nested() {
     let ctx = make_test_context();
     // The AccessibleDocument predicate from the fixture
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["or",
-            ["eq", ["field", "self", "visibility"], "public"],
-            ["eq", ["field", "self", "owner_id"], ["field", "actor", "id"]],
-            ["and",
-                ["eq", ["field", "self", "visibility"], "shared"],
-                ["neq", ["field", "actor", "role"], "guest"]
-            ]
+    let expr: Expr = serde_json::from_value(serde_json::json!([
+        "or",
+        ["eq", ["field", "self", "visibility"], "public"],
+        [
+            "eq",
+            ["field", "self", "owner_id"],
+            ["field", "actor", "id"]
+        ],
+        [
+            "and",
+            ["eq", ["field", "self", "visibility"], "shared"],
+            ["neq", ["field", "actor", "role"], "guest"]
         ]
-    ))
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -190,10 +180,8 @@ fn test_compile_complex_nested() {
 #[test]
 fn test_compile_derived_fn_call() {
     let ctx = make_test_context();
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["derived", "canAccess", "u", "d"]
-    ))
-    .unwrap();
+    let expr: Expr =
+        serde_json::from_value(serde_json::json!(["derived", "canAccess", "u", "d"])).unwrap();
     // Should compile without error (we just verify it compiles, not evaluates,
     // since full function evaluation requires model state resolution)
     let result = compile_expr(&expr, &ctx);
@@ -204,10 +192,7 @@ fn test_compile_derived_fn_call() {
 fn test_compile_unknown_operator_fails() {
     let ctx = make_test_context();
     // "bogus" is not a known operator
-    let expr: Expr = serde_json::from_value(serde_json::json!(
-        ["eq", true, true]
-    ))
-    .unwrap();
+    let expr: Expr = serde_json::from_value(serde_json::json!(["eq", true, true])).unwrap();
     // This should succeed since eq is valid
     assert!(compile_expr(&expr, &ctx).is_ok());
 }

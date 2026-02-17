@@ -50,7 +50,10 @@ fn test_parse_entity_fields() {
         "values": ["admin", "member", "guest"]
     });
     let field: beacon_ir::types::FieldDef = serde_json::from_value(json).unwrap();
-    assert!(matches!(field.field_type, beacon_ir::types::FieldType::Enum { .. }));
+    assert!(matches!(
+        field.field_type,
+        beacon_ir::types::FieldType::Enum { .. }
+    ));
 }
 
 #[test]
@@ -71,7 +74,10 @@ fn test_parse_protocol_with_grammar_constructs() {
         }
     });
     let proto: beacon_ir::types::Protocol = serde_json::from_value(json).unwrap();
-    assert!(matches!(proto.root, beacon_ir::types::ProtocolNode::Seq { .. }));
+    assert!(matches!(
+        proto.root,
+        beacon_ir::types::ProtocolNode::Seq { .. }
+    ));
 }
 
 #[test]

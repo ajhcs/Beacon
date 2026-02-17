@@ -222,13 +222,14 @@ pub fn compile_expr(expr: &Expr, _ctx: &TypeContext) -> Result<CompiledExpr, Com
 pub fn eval_expr(expr: &CompiledExpr, env: &ValueEnv) -> Result<Value, EvalError> {
     match expr {
         CompiledExpr::Literal(v) => Ok(v.clone()),
-        CompiledExpr::Field { entity, field } => env
-            .get_field(entity, field)
-            .cloned()
-            .ok_or_else(|| EvalError::FieldNotFound {
-                entity: entity.clone(),
-                field: field.clone(),
-            }),
+        CompiledExpr::Field { entity, field } => {
+            env.get_field(entity, field)
+                .cloned()
+                .ok_or_else(|| EvalError::FieldNotFound {
+                    entity: entity.clone(),
+                    field: field.clone(),
+                })
+        }
         CompiledExpr::Op { op, args } => eval_op(op, args, env),
         CompiledExpr::Quantifier { .. } => Err(EvalError::Unsupported {
             reason: "Quantifier evaluation requires model state iteration".to_string(),

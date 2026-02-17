@@ -125,7 +125,10 @@ impl StrategyStack {
 
     /// Get the current (top) strategy.
     pub fn current(&mut self) -> &mut dyn Strategy {
-        self.stack.last_mut().expect("strategy stack is never empty").as_mut()
+        self.stack
+            .last_mut()
+            .expect("strategy stack is never empty")
+            .as_mut()
     }
 
     /// Push a new strategy. If depth limit exceeded, pop the oldest.

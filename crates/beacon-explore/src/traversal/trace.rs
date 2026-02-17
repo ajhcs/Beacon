@@ -19,14 +19,9 @@ pub enum TraceStepKind {
     /// Reached an end node.
     End,
     /// Selected a branch in an alt block.
-    BranchSelected {
-        branch_id: String,
-        weight_used: f64,
-    },
+    BranchSelected { branch_id: String, weight_used: f64 },
     /// Entered a loop.
-    LoopEnter {
-        iterations_chosen: u32,
-    },
+    LoopEnter { iterations_chosen: u32 },
     /// Exited a loop.
     LoopExit,
     /// Executed an action (call terminal).
@@ -37,9 +32,7 @@ pub enum TraceStepKind {
         fuel_consumed: Option<u64>,
     },
     /// Guard check failed — action not executed.
-    GuardFailed {
-        action: String,
-    },
+    GuardFailed { action: String },
 }
 
 /// Full traversal trace for a campaign run.

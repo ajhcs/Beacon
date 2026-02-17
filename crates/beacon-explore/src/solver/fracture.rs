@@ -10,8 +10,8 @@
 use std::collections::BTreeMap;
 
 use super::constraint::CnfClauses;
-use super::domain::{EncodedInputSpace, Encoding, lit_for_value};
-use super::search::{SearchError, find_many, is_sat};
+use super::domain::{lit_for_value, EncodedInputSpace, Encoding};
+use super::search::{find_many, is_sat, SearchError};
 use super::{DomainValue, TestVector};
 
 /// A subspace created by fixing one or more domain variables.
@@ -34,9 +34,7 @@ pub enum SubspaceResult {
         vectors: Vec<TestVector>,
     },
     /// Subspace is unsatisfiable — no valid assignments exist.
-    Unsat {
-        subspace: Subspace,
-    },
+    Unsat { subspace: Subspace },
 }
 
 /// Fracture an input space by a single variable.
@@ -87,18 +85,16 @@ pub fn fracture_by_variable(
 fn domain_values(encoding: &Encoding) -> Vec<DomainValue> {
     match encoding {
         Encoding::Bool { .. } => vec![DomainValue::Bool(false), DomainValue::Bool(true)],
-        Encoding::OneHot { variants } => {
-            variants
-                .iter()
-                .map(|(label, _)| {
-                    if let Ok(i) = label.parse::<i64>() {
-                        DomainValue::Int(i)
-                    } else {
-                        DomainValue::Enum(label.clone())
-                    }
-                })
-                .collect()
-        }
+        Encoding::OneHot { variants } => variants
+            .iter()
+            .map(|(label, _)| {
+                if let Ok(i) = label.parse::<i64>() {
+                    DomainValue::Int(i)
+                } else {
+                    DomainValue::Enum(label.clone())
+                }
+            })
+            .collect(),
     }
 }
 
@@ -142,13 +138,8 @@ pub fn fracture_and_solve(
     base_stage_id: u64,
     max_vectors_per_subspace: usize,
 ) -> Result<Vec<SubspaceResult>, SearchError> {
-    let subspaces = fracture_by_variable(
-        encoded,
-        variable,
-        base_fixed,
-        base_clauses,
-        base_stage_id,
-    )?;
+    let subspaces =
+        fracture_by_variable(encoded, variable, base_fixed, base_clauses, base_stage_id)?;
 
     let mut results = Vec::new();
     for subspace in &subspaces {
@@ -176,7 +167,12 @@ pub fn hierarchical_fracture(
 ) -> Result<Vec<TestVector>, SearchError> {
     if variables.is_empty() {
         // No variables to fracture — just solve the whole space.
-        return super::search::find_many(encoded, constraint_clauses, &vec![], max_vectors_per_leaf);
+        return super::search::find_many(
+            encoded,
+            constraint_clauses,
+            &vec![],
+            max_vectors_per_leaf,
+        );
     }
 
     let mut all_vectors = Vec::new();
@@ -195,6 +191,7 @@ pub fn hierarchical_fracture(
     Ok(all_vectors)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn hierarchical_fracture_inner(
     encoded: &EncodedInputSpace,
     constraint_clauses: &CnfClauses,
@@ -219,13 +216,7 @@ fn hierarchical_fracture_inner(
     }
 
     let variable = &variables[depth];
-    let subspaces = fracture_by_variable(
-        encoded,
-        variable,
-        fixed,
-        base_clauses,
-        stage_id,
-    )?;
+    let subspaces = fracture_by_variable(encoded, variable, fixed, base_clauses, stage_id)?;
 
     for subspace in &subspaces {
         // Quick SAT check before recursing.
@@ -281,8 +272,8 @@ mod tests {
     use beacon_ir::types::*;
     use std::collections::{HashMap, HashSet};
 
-    use crate::solver::domain::encode_input_space;
     use crate::solver::constraint::encode_constraints;
+    use crate::solver::domain::encode_input_space;
 
     fn make_input_space(
         domains: HashMap<String, Domain>,
@@ -304,19 +295,15 @@ mod tests {
         let mut domains = HashMap::new();
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
         let encoded = encode_input_space(&input_space).unwrap();
 
-        let subspaces = fracture_by_variable(
-            &encoded,
-            "flag",
-            &BTreeMap::new(),
-            &vec![],
-            0,
-        )
-        .unwrap();
+        let subspaces =
+            fracture_by_variable(&encoded, "flag", &BTreeMap::new(), &vec![], 0).unwrap();
 
         assert_eq!(subspaces.len(), 2); // true and false
         assert_eq!(subspaces[0].fixed["flag"], DomainValue::Bool(false));
@@ -337,19 +324,22 @@ mod tests {
         let input_space = make_input_space(domains, vec![]);
         let encoded = encode_input_space(&input_space).unwrap();
 
-        let subspaces = fracture_by_variable(
-            &encoded,
-            "role",
-            &BTreeMap::new(),
-            &vec![],
-            0,
-        )
-        .unwrap();
+        let subspaces =
+            fracture_by_variable(&encoded, "role", &BTreeMap::new(), &vec![], 0).unwrap();
 
         assert_eq!(subspaces.len(), 3);
-        assert_eq!(subspaces[0].fixed["role"], DomainValue::Enum("admin".into()));
-        assert_eq!(subspaces[1].fixed["role"], DomainValue::Enum("member".into()));
-        assert_eq!(subspaces[2].fixed["role"], DomainValue::Enum("guest".into()));
+        assert_eq!(
+            subspaces[0].fixed["role"],
+            DomainValue::Enum("admin".into())
+        );
+        assert_eq!(
+            subspaces[1].fixed["role"],
+            DomainValue::Enum("member".into())
+        );
+        assert_eq!(
+            subspaces[2].fixed["role"],
+            DomainValue::Enum("guest".into())
+        );
     }
 
     #[test]
@@ -369,7 +359,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let constraints = vec![InputConstraint {
@@ -466,7 +458,10 @@ mod tests {
 
         let vectors = collect_vectors(&results);
         assert_eq!(vectors.len(), 1);
-        assert_eq!(vectors[0].assignments["role"], DomainValue::Enum("admin".into()));
+        assert_eq!(
+            vectors[0].assignments["role"],
+            DomainValue::Enum("admin".into())
+        );
     }
 
     #[test]
@@ -484,7 +479,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let input_space = make_input_space(domains, vec![]);
@@ -522,7 +519,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let constraints = vec![InputConstraint {
@@ -583,14 +582,8 @@ mod tests {
         let input_space = make_input_space(domains, vec![]);
         let encoded = encode_input_space(&input_space).unwrap();
 
-        let subspaces = fracture_by_variable(
-            &encoded,
-            "role",
-            &BTreeMap::new(),
-            &vec![],
-            1,
-        )
-        .unwrap();
+        let subspaces =
+            fracture_by_variable(&encoded, "role", &BTreeMap::new(), &vec![], 1).unwrap();
 
         let ids: HashSet<u64> = subspaces.iter().map(|s| s.stage_id).collect();
         assert_eq!(ids.len(), 3); // All stage IDs are unique.

@@ -5,7 +5,11 @@ fn test_full_compilation_pipeline() {
     let json = include_str!("../../beacon-ir/tests/fixtures/document_lifecycle.json");
     let ir = parse_ir(json).unwrap();
     let result = beacon_compiler::compile(&ir);
-    assert!(result.is_ok(), "Compilation failed: {:?}", result.unwrap_err());
+    assert!(
+        result.is_ok(),
+        "Compilation failed: {:?}",
+        result.unwrap_err()
+    );
     let compiled = result.unwrap();
     assert!(!compiled.graphs.is_empty());
     assert!(!compiled.predicates.is_empty());
@@ -59,5 +63,7 @@ fn test_compiled_ir_has_property_predicates() {
     let ir = parse_ir(json).unwrap();
     let compiled = beacon_compiler::compile(&ir).unwrap();
     // Should have compiled predicates for invariant properties
-    assert!(compiled.predicates.contains_key("property:ownership_isolation"));
+    assert!(compiled
+        .predicates
+        .contains_key("property:ownership_isolation"));
 }

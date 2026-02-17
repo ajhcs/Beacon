@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tier1:
+    name: Tier 1 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: fmt
+        shell: pwsh
+        run: cargo fmt --all -- --check
+
+      - name: clippy (--locked)
+        shell: pwsh
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: test (--locked)
+        shell: pwsh
+        run: cargo test --workspace --locked
+
+      - name: build (--locked)
+        shell: pwsh
+        run: cargo build --workspace --locked
+
+  tier2-macos:
+    name: Tier 2 (informational) / macOS
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: fmt
+        shell: pwsh
+        run: cargo fmt --all -- --check
+
+      - name: clippy (--locked)
+        shell: pwsh
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: test (--locked)
+        shell: pwsh
+        run: cargo test --workspace --locked
+
+      - name: build (--locked)
+        shell: pwsh
+        run: cargo build --workspace --locked
+
+  security-cargo-audit:
+    name: Security / cargo-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: RustSec advisory audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  security-cargo-deny:
+    name: Security / cargo-deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency policy check (advisories)
+        uses: EmbarkStudios/cargo-deny-action@v2.0.15
+        with:
+          command: check advisories
+
+  security-gitleaks:
+    name: Security / gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine gitleaks eligibility
+        id: gitleaks-gate
+        shell: bash
+        env:
+          OWNER_TYPE: ${{ github.event.repository.owner.type }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        run: |
+          if [ "$OWNER_TYPE" = "Organization" ] && [ -z "$GITLEAKS_LICENSE" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping gitleaks-action: set GITLEAKS_LICENSE for organization-owned repositories."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Gitleaks scan
+        if: ${{ steps.gitleaks-gate.outputs.run == 'true' }}
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+
+      - name: Gitleaks skipped
+        if: ${{ steps.gitleaks-gate.outputs.run != 'true' }}
+        shell: bash
+        run: echo "gitleaks-action skipped due to missing org license secret."

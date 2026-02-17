@@ -110,9 +110,7 @@ fn resolve_value(
         }
         // Array form: ["field", entity_var, field_name] — resolve from model state
         serde_json::Value::Array(arr) => {
-            if arr.len() == 3
-                && arr[0].as_str() == Some("field")
-            {
+            if arr.len() == 3 && arr[0].as_str() == Some("field") {
                 let entity_var = arr[1].as_str().unwrap_or("");
                 let field_name = arr[2].as_str().unwrap_or("");
 
@@ -131,12 +129,11 @@ fn resolve_value(
                     }
                 })?;
 
-                instance
-                    .get_field(field_name)
-                    .cloned()
-                    .ok_or_else(|| EffectError::ValueResolution {
+                instance.get_field(field_name).cloned().ok_or_else(|| {
+                    EffectError::ValueResolution {
                         reason: format!("field '{field_name}' not found on {entity_var}"),
-                    })
+                    }
+                })
             } else {
                 Err(EffectError::ValueResolution {
                     reason: format!("unsupported array value: {json_val}"),

@@ -167,7 +167,10 @@ impl ModelState {
     pub fn record_action(&mut self, action: &str, args: &[(&str, &str)]) {
         let entry = TraceEntry {
             action: action.to_string(),
-            args: args.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            args: args
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
             generation: self.generation,
         };
         Arc::make_mut(&mut self.trace).push(entry);

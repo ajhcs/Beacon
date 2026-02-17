@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use beacon_ir::types::{ActionBinding, Bindings, EventHooks};
 use beacon_sandbox::config::SandboxConfig;
 use beacon_sandbox::sandbox::Sandbox;
-use beacon_vif::adapter::{VerificationAdapter, ObserverResult};
+use beacon_vif::adapter::{ObserverResult, VerificationAdapter};
 
 fn wat_to_wasm(wat: &str) -> Vec<u8> {
     wat::parse_str(wat).expect("valid WAT")

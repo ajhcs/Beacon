@@ -4,7 +4,10 @@ use beacon_ir::expr::Expr;
 fn test_parse_literal_bool() {
     let json = serde_json::json!(true);
     let expr: Expr = serde_json::from_value(json).unwrap();
-    assert!(matches!(expr, Expr::Literal(beacon_ir::expr::Literal::Bool(true))));
+    assert!(matches!(
+        expr,
+        Expr::Literal(beacon_ir::expr::Literal::Bool(true))
+    ));
 }
 
 #[test]
@@ -23,9 +26,11 @@ fn test_parse_eq_expression() {
 
 #[test]
 fn test_parse_nested_and_or() {
-    let json = serde_json::json!(["or",
+    let json = serde_json::json!([
+        "or",
         ["eq", ["field", "self", "visibility"], "public"],
-        ["and",
+        [
+            "and",
             ["eq", ["field", "self", "visibility"], "shared"],
             ["neq", ["field", "actor", "role"], "guest"]
         ]
@@ -43,7 +48,10 @@ fn test_parse_field_access() {
 
 #[test]
 fn test_parse_forall_quantifier() {
-    let json = serde_json::json!(["forall", "d", "Document",
+    let json = serde_json::json!([
+        "forall",
+        "d",
+        "Document",
         ["not", ["derived", "canAccess", "u", "d"]]
     ]);
     let expr: Expr = serde_json::from_value(json).unwrap();

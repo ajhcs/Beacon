@@ -28,7 +28,11 @@ fn test_simulate_single_step() {
     };
 
     let result = simulate(&ir, &ctx, &mut state, &config);
-    assert!(result.is_ok(), "Simulation failed: {:?}", result.unwrap_err());
+    assert!(
+        result.is_ok(),
+        "Simulation failed: {:?}",
+        result.unwrap_err()
+    );
     let report = result.unwrap();
 
     // Should have executed at least one action
@@ -57,7 +61,9 @@ fn test_simulate_multiple_steps() {
     // Should have executed multiple actions
     assert!(result.steps_executed > 1);
     // Should have created a document (first action is always create_document)
-    assert!(result.actions_executed.contains(&"create_document".to_string()));
+    assert!(result
+        .actions_executed
+        .contains(&"create_document".to_string()));
 }
 
 #[test]
@@ -101,7 +107,11 @@ fn test_simulate_detects_no_violations_on_valid_spec() {
 
     let result = simulate(&ir, &ctx, &mut state, &config).unwrap();
     // With a valid spec and single authenticated admin, no contradictions expected
-    assert!(result.violations.is_empty(), "Unexpected violations: {:?}", result.violations);
+    assert!(
+        result.violations.is_empty(),
+        "Unexpected violations: {:?}",
+        result.violations
+    );
 }
 
 #[test]

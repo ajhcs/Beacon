@@ -7,7 +7,10 @@ fn make_trace(actions: &[(&str, &[(&str, &str)])]) -> Vec<TraceEntry> {
         .enumerate()
         .map(|(i, (action, args))| TraceEntry {
             action: action.to_string(),
-            args: args.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            args: args
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
             generation: i as u64,
         })
         .collect()
@@ -37,7 +40,11 @@ fn test_auth_before_mutation_passes() {
     }];
 
     let violations = check_temporal(&trace, &rules);
-    assert!(violations.is_empty(), "Expected no violations, got: {:?}", violations);
+    assert!(
+        violations.is_empty(),
+        "Expected no violations, got: {:?}",
+        violations
+    );
 }
 
 #[test]

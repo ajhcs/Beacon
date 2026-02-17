@@ -126,6 +126,7 @@ pub struct TraversalEngine<'a, V: VectorSource, E: ActionExecutor> {
 }
 
 impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph: &'a NdaGraph,
         model: &'a mut ModelState,
@@ -194,20 +195,17 @@ impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
                     // Action pipeline step 1-2: Check guard against model state
                     let guard_passed = if let Some(ref guard_expr) = guard {
                         let bindings = self.make_bindings();
-                        match beacon_model::eval::eval_in_model(
-                            guard_expr,
-                            self.model,
-                            &bindings,
-                        ) {
-                            Ok(Value::Bool(true)) => true,
-                            _ => false,
-                        }
+                        matches!(
+                            beacon_model::eval::eval_in_model(guard_expr, self.model, &bindings),
+                            Ok(Value::Bool(true))
+                        )
                     } else {
                         true
                     };
 
                     if !guard_passed {
                         self.guards_failed += 1;
+                        let model_state_hash = self.compute_model_state_hash(&[]);
                         self.trace.record(
                             node_id,
                             TraceStepKind::GuardFailed {
@@ -217,8 +215,7 @@ impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
                         self.emit_signal(SignalType::GuardFailure {
                             branch_id: String::new(),
                             action,
-                            // TODO: compute from actual model state via weight_table::compute_model_state_hash
-                            model_state_hash: 0,
+                            model_state_hash,
                         });
                         // Push successors so traversal continues past this node
                         self.push_successors(node_id, &mut object_stack);
@@ -335,8 +332,7 @@ impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
                     min,
                     max,
                 } => {
-                    let decision =
-                        self.strategy_stack.current().choose_iterations(min, max);
+                    let decision = self.strategy_stack.current().choose_iterations(min, max);
 
                     self.trace.record(
                         node_id,
@@ -402,10 +398,8 @@ impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
     /// Push only LoopExit successors from a LoopEntry node.
     fn push_loop_exit_successors(&self, node_id: NodeId, stack: &mut Vec<NodeId>) {
         for &(from, to) in &self.graph.edges {
-            if from == node_id {
-                if matches!(self.graph.nodes[to as usize], GraphNode::LoopExit) {
-                    stack.push(to);
-                }
+            if from == node_id && matches!(self.graph.nodes[to as usize], GraphNode::LoopExit) {
+                stack.push(to);
             }
         }
     }
@@ -994,7 +988,10 @@ mod tests {
         let result2 = engine2.run_pass(10_000);
 
         // Same seed -> same branch chosen
-        assert_eq!(result1.coverage.action_counts, result2.coverage.action_counts);
+        assert_eq!(
+            result1.coverage.action_counts,
+            result2.coverage.action_counts
+        );
     }
 
     /// Custom executor that simulates crashes for testing.

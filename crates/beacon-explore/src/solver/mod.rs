@@ -1,11 +1,11 @@
-pub mod domain;
 pub mod constraint;
-pub mod search;
-pub mod fracture;
 pub mod coverage;
+pub mod domain;
+pub mod fracture;
+pub mod pipeline;
 pub mod pool;
 pub mod rng;
-pub mod pipeline;
+pub mod search;
 
 use std::collections::BTreeMap;
 

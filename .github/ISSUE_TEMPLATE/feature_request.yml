@@ -1,0 +1,81 @@
+name: Feature request
+description: Propose a new capability or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user value and how we can validate the change when implemented.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem or workflow gap does this solve?
+      placeholder: "Today, users cannot..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want.
+      placeholder: "Implement X so users can Y."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other options and why they are less suitable.
+      placeholder: "Alternative A/B..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: What should be included, and what should not be included in this change?
+      placeholder: |
+        In scope:
+        Out of scope:
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Concrete, testable criteria.
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should this feature be verified?
+      placeholder: |
+        - Command(s) to run:
+        - Expected output/behavior:
+        - Edge cases:
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks or trade-offs
+      description: Backward compatibility, performance, or maintenance concerns.
+      placeholder: "Potential risks include..."
+    validations:
+      required: false

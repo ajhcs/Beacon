@@ -1,19 +1,12 @@
 /// Signals emitted by the traversal engine during action execution.
 /// These drive the adaptation layer (signal -> directive mappings).
-
 /// All signal types the engine can emit.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SignalType {
     /// A new state or transition was covered for the first time.
-    CoverageDelta {
-        node_id: u32,
-        action: String,
-    },
+    CoverageDelta { node_id: u32, action: String },
     /// An invariant or temporal property was violated.
-    PropertyViolation {
-        property: String,
-        details: String,
-    },
+    PropertyViolation { property: String, details: String },
     /// Model truth diverged from DUT observation.
     Discrepancy {
         action: String,
@@ -21,10 +14,7 @@ pub enum SignalType {
         observed_value: String,
     },
     /// DUT panicked or trapped in WASM.
-    Crash {
-        action: String,
-        message: String,
-    },
+    Crash { action: String, message: String },
     /// DUT action exceeded time/fuel budget.
     Timeout {
         action: String,

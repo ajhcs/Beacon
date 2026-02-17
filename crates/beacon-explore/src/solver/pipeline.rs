@@ -16,10 +16,10 @@ use rayon::prelude::*;
 
 use beacon_ir::types::InputSpace;
 
-use super::constraint::{CnfClauses, encode_constraints};
-use super::domain::{EncodedInputSpace, encode_input_space};
-use super::fracture::{Subspace, fracture_by_variable};
-use super::search::{SearchError, find_many, is_sat};
+use super::constraint::{encode_constraints, CnfClauses};
+use super::domain::{encode_input_space, EncodedInputSpace};
+use super::fracture::{fracture_by_variable, Subspace};
+use super::search::{find_many, is_sat, SearchError};
 use super::{DomainValue, TestVector};
 
 /// Configuration for the pipeline.
@@ -106,6 +106,7 @@ pub fn run_pipeline(
 /// to solve all subspaces in parallel. UNSAT subspaces are aborted.
 /// SAT subspaces are either recursed into (if more variables remain)
 /// or searched for vectors (leaf level).
+#[allow(clippy::too_many_arguments)]
 fn parallel_fracture_recursive(
     encoded: &EncodedInputSpace,
     constraint_clauses: &CnfClauses,
@@ -137,21 +138,15 @@ fn parallel_fracture_recursive(
     }
 
     let variable = &variables[depth];
-    let subspaces = fracture_by_variable(
-        encoded,
-        variable,
-        fixed,
-        base_clauses,
-        stage_id,
-    )?;
+    let subspaces = fracture_by_variable(encoded, variable, fixed, base_clauses, stage_id)?;
 
     // Parallel SAT check across all subspaces.
     let sat_results: Vec<(usize, bool)> = subspaces
         .par_iter()
         .enumerate()
         .map(|(i, subspace)| {
-            let sat = is_sat(encoded, constraint_clauses, &subspace.fixing_clauses)
-                .unwrap_or(false);
+            let sat =
+                is_sat(encoded, constraint_clauses, &subspace.fixing_clauses).unwrap_or(false);
             (i, sat)
         })
         .collect();
@@ -269,6 +264,7 @@ pub fn run_pipeline_parallel_leaves(
 
 /// Recursively collect all leaf subspaces without solving them.
 /// Tracks how many subspaces were pruned as UNSAT during collection.
+#[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     encoded: &EncodedInputSpace,
     constraint_clauses: &CnfClauses,
@@ -290,13 +286,7 @@ fn collect_leaves(
     }
 
     let variable = &variables[depth];
-    let subspaces = fracture_by_variable(
-        encoded,
-        variable,
-        fixed,
-        base_clauses,
-        stage_id,
-    )?;
+    let subspaces = fracture_by_variable(encoded, variable, fixed, base_clauses, stage_id)?;
 
     // Quick parallel SAT check to prune early.
     let sat_checks: Vec<bool> = subspaces
@@ -352,7 +342,9 @@ mod tests {
         let mut domains = HashMap::new();
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
 
@@ -379,7 +371,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
 
@@ -446,7 +440,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         domains.insert(
             "vis".to_string(),
@@ -483,7 +479,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let constraints = vec![InputConstraint {
@@ -538,7 +536,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let input_space = make_input_space(domains, vec![]);
@@ -572,7 +572,9 @@ mod tests {
         );
         domains.insert(
             "actor_authenticated".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         domains.insert(
             "doc_visibility".to_string(),
@@ -584,7 +586,9 @@ mod tests {
         );
         domains.insert(
             "actor_is_owner".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         domains.insert(
             "concurrent_actors".to_string(),

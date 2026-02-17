@@ -16,13 +16,9 @@ use super::directive::Directive;
 #[derive(Debug, Clone, PartialEq)]
 enum TimeoutState {
     /// Retry scheduled — waiting for retry result.
-    RetryScheduled {
-        reduced_fuel: u64,
-    },
+    RetryScheduled { reduced_fuel: u64 },
     /// Retry also timed out — skip this action.
-    PermanentSkip {
-        skip_remaining: u32,
-    },
+    PermanentSkip { skip_remaining: u32 },
 }
 
 /// Tracks timeout two-step state per action.

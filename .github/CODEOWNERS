@@ -1,0 +1,15 @@
+# Default ownership. Update handles as the team structure evolves.
+* @ajhcs
+
+# GitHub automation and governance files.
+.github/ @ajhcs
+
+# Rust workspace crates.
+crates/ @ajhcs
+
+# Project documentation.
+docs/ @ajhcs
+
+# Workspace metadata.
+Cargo.toml @ajhcs
+Cargo.lock @ajhcs

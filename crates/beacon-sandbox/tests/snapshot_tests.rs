@@ -56,15 +56,23 @@ fn test_snapshot_and_restore_memory() {
     let mut instance = ssb.instantiate().unwrap();
 
     // Write some data
-    instance.call_func("store_at", &[0i32.into(), 999i32.into()]).unwrap();
-    instance.call_func("store_at", &[4i32.into(), 888i32.into()]).unwrap();
+    instance
+        .call_func("store_at", &[0i32.into(), 999i32.into()])
+        .unwrap();
+    instance
+        .call_func("store_at", &[4i32.into(), 888i32.into()])
+        .unwrap();
 
     // Take snapshot at generation 5
     let snap = instance.snapshot(5).unwrap();
 
     // Mutate more
-    instance.call_func("store_at", &[0i32.into(), 111i32.into()]).unwrap();
-    instance.call_func("store_at", &[4i32.into(), 222i32.into()]).unwrap();
+    instance
+        .call_func("store_at", &[0i32.into(), 111i32.into()])
+        .unwrap();
+    instance
+        .call_func("store_at", &[4i32.into(), 222i32.into()])
+        .unwrap();
 
     // Verify mutation happened
     let val = instance.call_func("load_from", &[0i32.into()]).unwrap();
@@ -131,7 +139,9 @@ fn test_snapshot_no_memory_module() {
     let snap = instance.snapshot(0).unwrap();
 
     // Call function
-    let val = instance.call_func("add", &[3i32.into(), 4i32.into()]).unwrap();
+    let val = instance
+        .call_func("add", &[3i32.into(), 4i32.into()])
+        .unwrap();
     assert_eq!(val[0].i32(), Some(7));
 
     // Restore should succeed
@@ -139,7 +149,9 @@ fn test_snapshot_no_memory_module() {
     assert_eq!(gen, 0);
 
     // Function should still work
-    let val = instance.call_func("add", &[10i32.into(), 20i32.into()]).unwrap();
+    let val = instance
+        .call_func("add", &[10i32.into(), 20i32.into()])
+        .unwrap();
     assert_eq!(val[0].i32(), Some(30));
 }
 

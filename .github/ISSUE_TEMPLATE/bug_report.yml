@@ -1,0 +1,84 @@
+name: Bug report
+description: Report a reproducible problem in Beacon.
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please provide enough detail for someone else to reproduce and validate a fix.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe the bug.
+      placeholder: "When I run X, Y fails with Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide exact steps and inputs.
+      placeholder: |
+        1. Run `...`
+        2. Use input `...`
+        3. Observe `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "Describe what should have happened."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: "Describe what actually happened. Include error output if available."
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should we verify the fix?
+      placeholder: |
+        - Add/adjust test:
+        - Run command(s):
+        - Expected pass criteria:
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, rust version, commit/tag, and any other relevant context.
+      placeholder: |
+        - OS:
+        - Rust:
+        - Beacon commit/tag:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+    validations:
+      required: true

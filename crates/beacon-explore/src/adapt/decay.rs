@@ -145,11 +145,7 @@ mod tests {
 
         // Floor = 5% of 100 = 5.0
         // Uncovered total = 2.0 < 5.0 → boost
-        enforce_coverage_floor(
-            &mut wt,
-            &["uncovered_a".into(), "uncovered_b".into()],
-            0.05,
-        );
+        enforce_coverage_floor(&mut wt, &["uncovered_a".into(), "uncovered_b".into()], 0.05);
 
         let uncovered_total = wt.get("uncovered_a", 0) + wt.get("uncovered_b", 0);
         assert!(

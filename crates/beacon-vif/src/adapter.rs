@@ -49,7 +49,6 @@ pub struct VerificationAdapter {
 #[derive(Debug, Clone)]
 struct ObserverBinding {
     function: String,
-    params: Vec<String>,
 }
 
 impl VerificationAdapter {
@@ -65,12 +64,11 @@ impl VerificationAdapter {
     }
 
     /// Register an observer binding (from IR functions section).
-    pub fn register_observer(&mut self, name: &str, function: &str, params: &[String]) {
+    pub fn register_observer(&mut self, name: &str, function: &str, _params: &[String]) {
         self.observer_bindings.insert(
             name.to_string(),
             ObserverBinding {
                 function: function.to_string(),
-                params: params.to_vec(),
             },
         );
     }
@@ -208,7 +206,9 @@ impl VerificationAdapter {
 
     /// Get the WASM function name for an action.
     pub fn function_for_action(&self, action: &str) -> Option<&str> {
-        self.action_bindings.get(action).map(|b| b.function.as_str())
+        self.action_bindings
+            .get(action)
+            .map(|b| b.function.as_str())
     }
 
     /// Get all registered action names.

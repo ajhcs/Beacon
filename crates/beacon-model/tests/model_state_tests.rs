@@ -22,7 +22,10 @@ fn test_set_and_get_field() {
     let id = state.create_instance("User");
     state.set_field(&id, "role", Value::String("admin".to_string()));
     let inst = state.get_instance(&id).unwrap();
-    assert_eq!(inst.get_field("role"), Some(&Value::String("admin".to_string())));
+    assert_eq!(
+        inst.get_field("role"),
+        Some(&Value::String("admin".to_string()))
+    );
 }
 
 #[test]
@@ -46,11 +49,17 @@ fn test_fork_creates_independent_copy() {
 
     // Original unchanged
     let orig_inst = state.get_instance(&id).unwrap();
-    assert_eq!(orig_inst.get_field("role"), Some(&Value::String("admin".to_string())));
+    assert_eq!(
+        orig_inst.get_field("role"),
+        Some(&Value::String("admin".to_string()))
+    );
 
     // Fork has the new value
     let fork_inst = forked.get_instance(&id).unwrap();
-    assert_eq!(fork_inst.get_field("role"), Some(&Value::String("guest".to_string())));
+    assert_eq!(
+        fork_inst.get_field("role"),
+        Some(&Value::String("guest".to_string()))
+    );
 }
 
 #[test]
@@ -69,7 +78,10 @@ fn test_snapshot_and_rollback() {
     // Rollback
     state.rollback(snapshot);
     let inst = state.get_instance(&id).unwrap();
-    assert_eq!(inst.get_field("role"), Some(&Value::String("admin".to_string())));
+    assert_eq!(
+        inst.get_field("role"),
+        Some(&Value::String("admin".to_string()))
+    );
     assert!(state.all_instances("Document").is_empty());
 }
 

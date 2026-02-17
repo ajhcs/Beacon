@@ -5,7 +5,9 @@ use beacon_ir::types::Bindings;
 /// Errors discovered during interface validation.
 #[derive(Debug, thiserror::Error)]
 pub enum InterfaceError {
-    #[error("Missing export: action '{action}' expects WASM export '{function}', but it was not found")]
+    #[error(
+        "Missing export: action '{action}' expects WASM export '{function}', but it was not found"
+    )]
     MissingExport { action: String, function: String },
 
     #[error("Wrong kind: action '{action}' expects a function export '{function}', but found '{found_kind}'")]
@@ -108,7 +110,11 @@ pub fn validate_signatures(
     for (action_name, binding) in &bindings.actions {
         let func_name = &binding.function;
         let expected_params = binding.args.len();
-        let expected_returns = if is_void_return(&binding.returns) { 0 } else { 1 };
+        let expected_returns = if is_void_return(&binding.returns) {
+            0
+        } else {
+            1
+        };
 
         if let Some(&(actual_params, actual_returns)) = func_signatures.get(func_name.as_str()) {
             let matches = actual_params == expected_params && actual_returns == expected_returns;

@@ -1,0 +1,246 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-tier1:
+    name: Build Tier 1 artifacts / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+            installer_script: package-installer.sh
+          - os: windows-latest
+            target: windows-x86_64
+            installer_script: package-installer.ps1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release (--locked)
+        shell: pwsh
+        run: cargo build --workspace --release --locked
+
+      - name: Stage prebuilt artifacts
+        shell: pwsh
+        run: |
+          $packageRoot = "dist/${{ matrix.target }}"
+          $prebuiltDir = Join-Path $packageRoot "prebuilt"
+          $installerDir = Join-Path $packageRoot "installer"
+          New-Item -ItemType Directory -Path $prebuiltDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $installerDir -Force | Out-Null
+
+          $releaseRoot = (Resolve-Path "target/release").Path
+          $patterns = @(".exe", ".dll", ".so", ".dylib", ".rlib", ".a", ".lib")
+          $compiledFiles = @(Get-ChildItem -Path $releaseRoot -Recurse -File | Where-Object {
+            $patterns -contains $_.Extension.ToLowerInvariant()
+          })
+
+          if ($compiledFiles.Count -eq 0) {
+            Set-Content -Path (Join-Path $prebuiltDir "PREBUILT_PLACEHOLDER.txt") -Value "No distributable binary artifacts were detected in target/release for this workspace."
+          } else {
+            foreach ($file in $compiledFiles) {
+              $relative = $file.FullName.Substring($releaseRoot.Length).TrimStart('\', '/')
+              $destination = Join-Path $prebuiltDir $relative
+              $destinationDir = Split-Path -Path $destination -Parent
+              New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+              Copy-Item -Path $file.FullName -Destination $destination -Force
+            }
+          }
+
+          Copy-Item -Path "Cargo.toml" -Destination (Join-Path $packageRoot "Cargo.toml") -Force
+          Copy-Item -Path "Cargo.lock" -Destination (Join-Path $packageRoot "Cargo.lock") -Force
+          Set-Content -Path (Join-Path $packageRoot "BUILD_INFO.txt") -Value @(
+            "tag=${{ github.ref_name }}",
+            "sha=${{ github.sha }}",
+            "runner=${{ runner.os }}",
+            "built_utc=$((Get-Date).ToUniversalTime().ToString('o'))"
+          )
+
+      - name: Stage installer scripts
+        shell: pwsh
+        run: |
+          $sourceInstallerScript = "installers/${{ matrix.installer_script }}"
+          if (-not (Test-Path $sourceInstallerScript)) {
+            throw "Installer script source is missing: $sourceInstallerScript"
+          }
+
+          $installerScriptPath = "dist/${{ matrix.target }}/installer/${{ matrix.installer_script }}"
+          Copy-Item -Path $sourceInstallerScript -Destination $installerScriptPath -Force
+
+          if ($installerScriptPath.EndsWith(".sh")) {
+            & chmod +x $installerScriptPath
+          }
+
+          "INSTALLER_SCRIPT_PATH=$installerScriptPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify package installation
+        shell: pwsh
+        run: |
+          if (-not (Test-Path $env:INSTALLER_SCRIPT_PATH)) {
+            throw "Installer script path is missing: $env:INSTALLER_SCRIPT_PATH"
+          }
+
+          $sourceDir = "dist/${{ matrix.target }}/prebuilt"
+          $destinationDir = "dist/${{ matrix.target }}/installed"
+          $manifestPath = "dist/${{ matrix.target }}/installer/install-manifest.txt"
+
+          if (Test-Path $destinationDir) {
+            Remove-Item -Path $destinationDir -Recurse -Force
+          }
+          if (Test-Path $manifestPath) {
+            Remove-Item -Path $manifestPath -Force
+          }
+
+          if ($env:INSTALLER_SCRIPT_PATH.EndsWith(".ps1")) {
+            & pwsh -NoProfile -File $env:INSTALLER_SCRIPT_PATH -SourceDir $sourceDir -DestinationDir $destinationDir -ManifestPath $manifestPath
+          } elseif ($env:INSTALLER_SCRIPT_PATH.EndsWith(".sh")) {
+            & bash $env:INSTALLER_SCRIPT_PATH $sourceDir $destinationDir $manifestPath
+          } else {
+            throw "Unknown installer script extension: $env:INSTALLER_SCRIPT_PATH"
+          }
+
+          if (-not (Test-Path $manifestPath)) {
+            throw "Installer manifest was not created: $manifestPath"
+          }
+
+          $manifestContents = Get-Content -Path $manifestPath -Raw
+          if ([string]::IsNullOrWhiteSpace($manifestContents)) {
+            throw "Installer manifest is empty: $manifestPath"
+          }
+
+          $installedFiles = @(Get-ChildItem -Path $destinationDir -Recurse -File -ErrorAction Stop)
+          if ($installedFiles.Count -eq 0) {
+            throw "Installer did not produce any installed files in: $destinationDir"
+          }
+
+      - name: Archive and checksum
+        shell: pwsh
+        run: |
+          $packageRoot = "dist/${{ matrix.target }}"
+          $archiveName = "beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz"
+          $archivePath = Join-Path "dist" $archiveName
+          if (Test-Path $archivePath) {
+            Remove-Item $archivePath -Force
+          }
+          & tar -czf $archivePath -C $packageRoot .
+
+          $hash = (Get-FileHash -Algorithm SHA256 $archivePath).Hash.ToLowerInvariant()
+          Set-Content -Path "${archivePath}.sha256" -Value "$hash  $archiveName"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: beacon-release-${{ matrix.target }}
+          path: |
+            dist/beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            dist/beacon-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish release notes and artifacts
+    runs-on: ubuntu-latest
+    needs:
+      - build-tier1
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: beacon-release-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Build release notes and consolidated checksums
+        shell: pwsh
+        run: |
+          $checksumFiles = @(Get-ChildItem -Path "release-artifacts" -Filter "*.sha256" -File)
+          if ($checksumFiles.Count -eq 0) {
+            throw "No checksum files found in release-artifacts."
+          }
+
+          $combinedChecksums = @()
+          foreach ($file in $checksumFiles) {
+            $combinedChecksums += (Get-Content -Path $file.FullName)
+          }
+          $combinedChecksums = $combinedChecksums | Sort-Object
+          $combinedChecksumsPath = "release-artifacts/CHECKSUMS.txt"
+          Set-Content -Path $combinedChecksumsPath -Value $combinedChecksums
+
+          $archives = Get-ChildItem -Path "release-artifacts" -Filter "*.tar.gz" -File | Sort-Object Name
+          $artifactLines = @()
+          foreach ($archive in $archives) {
+            $artifactLines += "- $($archive.Name)"
+          }
+          $artifactText = $artifactLines -join "`n"
+
+          $tag = "${{ github.ref_name }}"
+          $notesLines = @(
+            "# Beacon $tag",
+            "",
+            "## Included artifacts",
+            $artifactText,
+            "- CHECKSUMS.txt",
+            "",
+            "## Platform policy",
+            "- Tier 1 (blocking): windows-latest, ubuntu-latest",
+            "- Tier 2 (informational CI only): macos-latest",
+            "",
+            "## Validation summary",
+            "- Built with `cargo build --workspace --release --locked` on Tier 1 runners.",
+            "- Installer scripts executed on Tier 1 runners with install manifest verification.",
+            "- SHA256 checksums generated for each uploaded artifact."
+          )
+          Set-Content -Path "release-artifacts/RELEASE_NOTES.md" -Value $notesLines
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notesPath = "release-artifacts/RELEASE_NOTES.md"
+
+          & gh release view $tag *> $null
+          $exists = $LASTEXITCODE -eq 0
+
+          if ($exists) {
+            & gh release edit $tag --title "Beacon $tag" --notes-file $notesPath
+          } else {
+            & gh release create $tag --title "Beacon $tag" --notes-file $notesPath
+          }
+
+          $uploadFiles = @(Get-ChildItem -Path "release-artifacts" -File | Where-Object {
+            $_.Name -ne "RELEASE_NOTES.md"
+          } | ForEach-Object { $_.FullName })
+
+          if ($uploadFiles.Count -eq 0) {
+            throw "No files found for upload."
+          }
+
+          & gh release upload $tag $uploadFiles --clobber

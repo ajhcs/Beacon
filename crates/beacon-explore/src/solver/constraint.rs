@@ -13,7 +13,7 @@
 use beacon_ir::expr::{Expr, Literal, OpKind};
 use varisat::Lit;
 
-use super::domain::{EncodedInputSpace, Encoding, lit_for_value, lit_for_not_value};
+use super::domain::{lit_for_not_value, lit_for_value, EncodedInputSpace, Encoding};
 use super::DomainValue;
 
 /// Errors during constraint encoding.
@@ -53,31 +53,34 @@ pub fn encode_constraints(
 /// - `and(A, B)` concatenates the clauses of A and B.
 /// - `implies(A, B)` becomes `or(not(A), B)`.
 /// - `or(A, B)` and `not(A)` require auxiliary handling.
-fn encode_expr(
-    expr: &Expr,
-    space: &EncodedInputSpace,
-) -> Result<CnfClauses, ConstraintError> {
+fn encode_expr(expr: &Expr, space: &EncodedInputSpace) -> Result<CnfClauses, ConstraintError> {
     match expr {
         // eq(domain_var_name, literal_value)
         // Encoded as: the SAT literal for that value must be true.
-        Expr::Op { op: OpKind::Eq, args } if args.len() == 2 => {
-            encode_eq(&args[0], &args[1], space, false)
-        }
+        Expr::Op {
+            op: OpKind::Eq,
+            args,
+        } if args.len() == 2 => encode_eq(&args[0], &args[1], space, false),
 
         // neq(domain_var_name, literal_value)
         // Encoded as: the SAT literal for that value must be false.
-        Expr::Op { op: OpKind::Neq, args } if args.len() == 2 => {
-            encode_eq(&args[0], &args[1], space, true)
-        }
+        Expr::Op {
+            op: OpKind::Neq,
+            args,
+        } if args.len() == 2 => encode_eq(&args[0], &args[1], space, true),
 
         // implies(A, B) => for each conjunction clause of A, create (not_A_clause OR B)
         // Simplified: implies(A, B) where A is atomic => not(A) OR B
-        Expr::Op { op: OpKind::Implies, args } if args.len() == 2 => {
-            encode_implies(&args[0], &args[1], space)
-        }
+        Expr::Op {
+            op: OpKind::Implies,
+            args,
+        } if args.len() == 2 => encode_implies(&args[0], &args[1], space),
 
         // and(A, B, ...) => concatenate clauses of each operand.
-        Expr::Op { op: OpKind::And, args } => {
+        Expr::Op {
+            op: OpKind::And,
+            args,
+        } => {
             let mut all = Vec::new();
             for arg in args {
                 all.extend(encode_expr(arg, space)?);
@@ -86,14 +89,16 @@ fn encode_expr(
         }
 
         // or(A, B, ...) => requires combining clause sets disjunctively.
-        Expr::Op { op: OpKind::Or, args } => {
-            encode_or(args, space)
-        }
+        Expr::Op {
+            op: OpKind::Or,
+            args,
+        } => encode_or(args, space),
 
         // not(A) => negate. Only works for atomic propositions.
-        Expr::Op { op: OpKind::Not, args } if args.len() == 1 => {
-            encode_not(&args[0], space)
-        }
+        Expr::Op {
+            op: OpKind::Not,
+            args,
+        } if args.len() == 1 => encode_not(&args[0], space),
 
         // Literal true is trivially satisfied (no clauses needed).
         Expr::Literal(Literal::Bool(true)) => Ok(vec![]),
@@ -116,9 +121,10 @@ fn encode_eq(
 ) -> Result<CnfClauses, ConstraintError> {
     // Try both orderings: (domain_name, value) or (value, domain_name).
     if let Some((domain_name, value)) = extract_domain_value_pair(lhs, rhs, space) {
-        let enc = space.domains.get(&domain_name).ok_or_else(|| {
-            ConstraintError::UnknownDomain(domain_name.clone())
-        })?;
+        let enc = space
+            .domains
+            .get(&domain_name)
+            .ok_or_else(|| ConstraintError::UnknownDomain(domain_name.clone()))?;
 
         let domain_val = literal_to_domain_value(&value, &enc.encoding)?;
 
@@ -178,7 +184,10 @@ fn expr_to_literal(expr: &Expr) -> Option<Literal> {
 }
 
 /// Convert an IR Literal to a DomainValue appropriate for the encoding.
-fn literal_to_domain_value(lit: &Literal, encoding: &Encoding) -> Result<DomainValue, ConstraintError> {
+fn literal_to_domain_value(
+    lit: &Literal,
+    encoding: &Encoding,
+) -> Result<DomainValue, ConstraintError> {
     match (lit, encoding) {
         (Literal::Bool(b), Encoding::Bool { .. }) => Ok(DomainValue::Bool(*b)),
         (Literal::String(s), Encoding::OneHot { .. }) => Ok(DomainValue::Enum(s.clone())),
@@ -244,10 +253,7 @@ fn encode_implies(
 /// When each sub-expression produces only unit clauses, we can combine
 /// them into a single disjunctive clause. For more complex cases,
 /// we use auxiliary variables (Tseitin transformation).
-fn encode_or(
-    args: &[Expr],
-    space: &EncodedInputSpace,
-) -> Result<CnfClauses, ConstraintError> {
+fn encode_or(args: &[Expr], space: &EncodedInputSpace) -> Result<CnfClauses, ConstraintError> {
     // Collect the encoding of each argument.
     let mut arg_clauses: Vec<CnfClauses> = Vec::new();
     for arg in args {
@@ -255,12 +261,11 @@ fn encode_or(
     }
 
     // Simple case: each argument produces exactly one unit clause.
-    let all_unit = arg_clauses.iter().all(|cs| cs.len() == 1 && cs[0].len() == 1);
+    let all_unit = arg_clauses
+        .iter()
+        .all(|cs| cs.len() == 1 && cs[0].len() == 1);
     if all_unit {
-        let combined: Vec<Lit> = arg_clauses
-            .iter()
-            .map(|cs| cs[0][0])
-            .collect();
+        let combined: Vec<Lit> = arg_clauses.iter().map(|cs| cs[0][0]).collect();
         return Ok(vec![combined]);
     }
 
@@ -293,10 +298,7 @@ fn encode_or(
 ///
 /// For atomic A (unit clause [lit]): not(A) = [!lit].
 /// For conjunctions: not(A AND B) = or(not(A), not(B)) — De Morgan.
-fn encode_not(
-    expr: &Expr,
-    space: &EncodedInputSpace,
-) -> Result<CnfClauses, ConstraintError> {
+fn encode_not(expr: &Expr, space: &EncodedInputSpace) -> Result<CnfClauses, ConstraintError> {
     let clauses = encode_expr(expr, space)?;
 
     if clauses.is_empty() {
@@ -323,7 +325,7 @@ mod tests {
     use super::*;
     use beacon_ir::types::*;
     use std::collections::HashMap;
-    use varisat::{ExtendFormula, solver::Solver};
+    use varisat::{solver::Solver, ExtendFormula};
 
     use crate::solver::domain::{decode_model, encode_input_space};
 
@@ -342,7 +344,9 @@ mod tests {
         }
     }
 
-    fn make_solver_with_space(input_space: &InputSpace) -> (Solver<'_>, super::super::domain::EncodedInputSpace) {
+    fn make_solver_with_space(
+        input_space: &InputSpace,
+    ) -> (Solver<'_>, super::super::domain::EncodedInputSpace) {
         let encoded = encode_input_space(input_space).unwrap();
         let mut solver = Solver::new();
         for clause in &encoded.structural_clauses {

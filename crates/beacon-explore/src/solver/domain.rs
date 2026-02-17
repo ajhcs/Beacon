@@ -10,7 +10,9 @@
 use std::collections::BTreeMap;
 
 use beacon_ir::types::{Domain, DomainType, InputSpace};
-use varisat::{ExtendFormula, Lit, Var};
+#[cfg(test)]
+use varisat::ExtendFormula;
+use varisat::{Lit, Var};
 
 use super::DomainValue;
 
@@ -30,9 +32,7 @@ pub struct EncodedDomain {
 #[derive(Debug, Clone)]
 pub enum Encoding {
     /// Single boolean variable.
-    Bool {
-        var: Var,
-    },
+    Bool { var: Var },
     /// One-hot: one SAT variable per value.
     OneHot {
         /// Ordered list of (value_label, SAT_variable).
@@ -127,10 +127,7 @@ fn encode_domain(
             // 2) At-most-one: pairwise (!vi OR !vj) for all i < j
             for i in 0..variants.len() {
                 for j in (i + 1)..variants.len() {
-                    clauses.push(vec![
-                        variants[i].1.negative(),
-                        variants[j].1.negative(),
-                    ]);
+                    clauses.push(vec![variants[i].1.negative(), variants[j].1.negative()]);
                 }
             }
 
@@ -169,10 +166,7 @@ fn encode_domain(
 
             for i in 0..variants.len() {
                 for j in (i + 1)..variants.len() {
-                    clauses.push(vec![
-                        variants[i].1.negative(),
-                        variants[j].1.negative(),
-                    ]);
+                    clauses.push(vec![variants[i].1.negative(), variants[j].1.negative()]);
                 }
             }
 
@@ -187,10 +181,7 @@ fn encode_domain(
 }
 
 /// Decode a SAT model (variable assignments) back to domain values.
-pub fn decode_model(
-    encoded: &EncodedInputSpace,
-    model: &[Lit],
-) -> BTreeMap<String, DomainValue> {
+pub fn decode_model(encoded: &EncodedInputSpace, model: &[Lit]) -> BTreeMap<String, DomainValue> {
     let mut assignments = BTreeMap::new();
 
     // Build a quick lookup: var_index -> is_true
@@ -246,19 +237,14 @@ fn decode_single(
 
 /// Get the SAT literal for a specific domain value.
 /// Returns `None` if the value doesn't exist in the domain.
-pub fn lit_for_value(
-    encoded: &EncodedDomain,
-    value: &DomainValue,
-) -> Option<Lit> {
+pub fn lit_for_value(encoded: &EncodedDomain, value: &DomainValue) -> Option<Lit> {
     match (&encoded.encoding, value) {
         (Encoding::Bool { var }, DomainValue::Bool(true)) => Some(var.positive()),
         (Encoding::Bool { var }, DomainValue::Bool(false)) => Some(var.negative()),
-        (Encoding::OneHot { variants }, DomainValue::Enum(s)) => {
-            variants
-                .iter()
-                .find(|(label, _)| label == s)
-                .map(|(_, var)| var.positive())
-        }
+        (Encoding::OneHot { variants }, DomainValue::Enum(s)) => variants
+            .iter()
+            .find(|(label, _)| label == s)
+            .map(|(_, var)| var.positive()),
         (Encoding::OneHot { variants }, DomainValue::Int(i)) => {
             let label = i.to_string();
             variants
@@ -271,10 +257,7 @@ pub fn lit_for_value(
 }
 
 /// Get the SAT literal that forces a domain to NOT take a specific value.
-pub fn lit_for_not_value(
-    encoded: &EncodedDomain,
-    value: &DomainValue,
-) -> Option<Lit> {
+pub fn lit_for_not_value(encoded: &EncodedDomain, value: &DomainValue) -> Option<Lit> {
     lit_for_value(encoded, value).map(|l| !l)
 }
 

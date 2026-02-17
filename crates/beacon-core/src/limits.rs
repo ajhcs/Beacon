@@ -26,8 +26,8 @@ pub struct ResourceLimits {
 impl Default for ResourceLimits {
     fn default() -> Self {
         Self {
-            max_wall_secs: 300,        // 5 minutes
-            max_iterations: 1_000_000, // 1M steps
+            max_wall_secs: 300,                  // 5 minutes
+            max_iterations: 1_000_000,           // 1M steps
             max_memory_bytes: 512 * 1024 * 1024, // 512 MB
             max_threads: 4,
             max_findings: 1000,
@@ -90,12 +90,7 @@ impl ResourceChecker {
 
     /// Check if any limit has been exceeded.
     /// Returns None if all ok, or the reason for stopping.
-    pub fn check(
-        &self,
-        iterations: u64,
-        findings: u32,
-        passes: u32,
-    ) -> Option<StopReason> {
+    pub fn check(&self, iterations: u64, findings: u32, passes: u32) -> Option<StopReason> {
         let elapsed = self.start_time.elapsed().as_secs();
 
         if elapsed >= self.limits.max_wall_secs {
@@ -256,10 +251,7 @@ mod tests {
         // Too many campaigns
         assert_eq!(
             validate_engine_limits(&engine, 2, 512),
-            Err(LimitViolation::TooManyCampaigns {
-                current: 2,
-                max: 2
-            })
+            Err(LimitViolation::TooManyCampaigns { current: 2, max: 2 })
         );
 
         // IR too large
@@ -274,10 +266,7 @@ mod tests {
 
     #[test]
     fn test_limit_violation_display() {
-        let v = LimitViolation::TooManyCampaigns {
-            current: 8,
-            max: 8,
-        };
+        let v = LimitViolation::TooManyCampaigns { current: 8, max: 8 };
         assert!(v.to_string().contains("8/8"));
     }
 

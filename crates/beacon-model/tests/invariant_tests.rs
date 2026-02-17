@@ -4,7 +4,11 @@ use beacon_model::effect::apply_effect;
 use beacon_model::invariant::{check_invariants, CompiledProperty};
 use beacon_model::state::{ModelState, Value};
 
-fn setup() -> (beacon_ir::types::BeaconIR, TypeContext, Vec<CompiledProperty>) {
+fn setup() -> (
+    beacon_ir::types::BeaconIR,
+    TypeContext,
+    Vec<CompiledProperty>,
+) {
     let json = include_str!("../../beacon-ir/tests/fixtures/document_lifecycle.json");
     let ir = parse_ir(json).unwrap();
     let ctx = TypeContext::from_ir(&ir);
@@ -42,7 +46,11 @@ fn test_invariant_passes_on_valid_state() {
     .unwrap();
 
     let violations = check_invariants(&state, &properties);
-    assert!(violations.is_empty(), "Expected no violations, got: {:?}", violations);
+    assert!(
+        violations.is_empty(),
+        "Expected no violations, got: {:?}",
+        violations
+    );
 }
 
 #[test]
@@ -53,14 +61,17 @@ fn test_invariant_passes_with_multiple_users() {
     // Use a custom invariant that doesn't require derived function resolution:
     // forall u in User: implies(eq(u.role, "admin"), eq(u.authenticated, true))
     // "All admins are authenticated"
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["forall", "u", "User",
-            ["implies",
-                ["eq", ["field", "u", "role"], "admin"],
-                ["eq", ["field", "u", "authenticated"], true]
-            ]
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "forall",
+        "u",
+        "User",
+        [
+            "implies",
+            ["eq", ["field", "u", "role"], "admin"],
+            ["eq", ["field", "u", "authenticated"], true]
         ]
-    )).unwrap();
+    ]))
+    .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
     let custom_props = vec![CompiledProperty {
         name: "admin_is_authenticated".to_string(),
@@ -80,7 +91,11 @@ fn test_invariant_passes_with_multiple_users() {
     state.set_field(&u2, "authenticated", Value::Bool(false));
 
     let violations = check_invariants(&state, &custom_props);
-    assert!(violations.is_empty(), "Expected no violations, got: {:?}", violations);
+    assert!(
+        violations.is_empty(),
+        "Expected no violations, got: {:?}",
+        violations
+    );
 }
 
 #[test]
@@ -98,9 +113,12 @@ fn test_simple_invariant_violation() {
     let (_ir, _ctx, _properties) = setup();
 
     // Create a custom property that we know will fail
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["forall", "u", "User", ["eq", ["field", "u", "authenticated"], true]]
-    ))
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "forall",
+        "u",
+        "User",
+        ["eq", ["field", "u", "authenticated"], true]
+    ]))
     .unwrap();
     let ctx_for_compile = _ctx;
     let compiled = compile_expr(&expr, &ctx_for_compile).unwrap();

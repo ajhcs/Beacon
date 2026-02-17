@@ -247,10 +247,7 @@ fn tool_beacon_fuzz_start(args: &Value, state: &McpState) -> Value {
     }
 
     // Transition to Running.
-    if let Err(e) = state
-        .manager
-        .set_phase(campaign_id, CampaignPhase::Running)
-    {
+    if let Err(e) = state.manager.set_phase(campaign_id, CampaignPhase::Running) {
         return tool_error(&e.to_string());
     }
 
@@ -345,10 +342,7 @@ fn tool_beacon_coverage(args: &Value, state: &McpState) -> Value {
     let targets = state.manager.get_coverage(campaign_id);
     let hit = targets.iter().filter(|t| t.status == "hit").count();
     let pending = targets.iter().filter(|t| t.status == "pending").count();
-    let unreachable = targets
-        .iter()
-        .filter(|t| t.status == "unreachable")
-        .count();
+    let unreachable = targets.iter().filter(|t| t.status == "unreachable").count();
 
     let percent = if campaign.coverage_total > 0 {
         (campaign.coverage_hit as f64 / campaign.coverage_total as f64) * 100.0

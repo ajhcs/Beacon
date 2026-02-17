@@ -49,9 +49,11 @@ fn test_eval_eq_with_field_and_literal() {
     let doc_id = state.create_instance("Document");
     state.set_field(&doc_id, "visibility", Value::String("public".to_string()));
 
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["eq", ["field", "self", "visibility"], "public"]
-    ))
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "eq",
+        ["field", "self", "visibility"],
+        "public"
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -74,9 +76,12 @@ fn test_eval_forall_quantifier_passes() {
     }
 
     // forall u in User: authenticated(u) == true
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["forall", "u", "User", ["eq", ["field", "u", "authenticated"], true]]
-    ))
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "forall",
+        "u",
+        "User",
+        ["eq", ["field", "u", "authenticated"], true]
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -95,9 +100,12 @@ fn test_eval_forall_quantifier_fails() {
     let u2 = state.create_instance("User");
     state.set_field(&u2, "authenticated", Value::Bool(false)); // This one breaks the forall
 
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["forall", "u", "User", ["eq", ["field", "u", "authenticated"], true]]
-    ))
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "forall",
+        "u",
+        "User",
+        ["eq", ["field", "u", "authenticated"], true]
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 
@@ -117,9 +125,12 @@ fn test_eval_exists_quantifier() {
     state.set_field(&u2, "role", Value::String("admin".to_string()));
 
     // exists u in User: role(u) == "admin"
-    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!(
-        ["exists", "u", "User", ["eq", ["field", "u", "role"], "admin"]]
-    ))
+    let expr: beacon_ir::expr::Expr = serde_json::from_value(serde_json::json!([
+        "exists",
+        "u",
+        "User",
+        ["eq", ["field", "u", "role"], "admin"]
+    ]))
     .unwrap();
     let compiled = compile_expr(&expr, &ctx).unwrap();
 

@@ -387,9 +387,9 @@ mod tests {
             &[],
         );
 
-        assert!(directives.iter().any(
-            |d| matches!(d, Directive::AdjustWeight { branch_id, .. } if branch_id == "act")
-        ));
+        assert!(directives
+            .iter()
+            .any(|d| matches!(d, Directive::AdjustWeight { branch_id, .. } if branch_id == "act")));
     }
 
     #[test]
@@ -440,9 +440,9 @@ mod tests {
         let has_force = directives
             .iter()
             .any(|d| matches!(d, Directive::Force { action, .. } if action == "buggy"));
-        let has_boost = directives
-            .iter()
-            .any(|d| matches!(d, Directive::AdjustWeight { branch_id, .. } if branch_id == "buggy"));
+        let has_boost = directives.iter().any(
+            |d| matches!(d, Directive::AdjustWeight { branch_id, .. } if branch_id == "buggy"),
+        );
         assert!(has_force);
         assert!(has_boost);
     }

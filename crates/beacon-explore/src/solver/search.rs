@@ -6,10 +6,10 @@
 
 use std::collections::HashSet;
 
-use varisat::{ExtendFormula, Lit, Var, solver::Solver};
+use varisat::{solver::Solver, ExtendFormula, Lit, Var};
 
-use super::domain::{EncodedInputSpace, Encoding, decode_model};
-use super::constraint::{CnfClauses, encode_constraints};
+use super::constraint::{encode_constraints, CnfClauses};
+use super::domain::{decode_model, EncodedInputSpace, Encoding};
 use super::TestVector;
 use beacon_ir::types::InputSpace;
 
@@ -36,22 +36,13 @@ pub enum SatResult {
 }
 
 /// Configuration for searching multiple vectors.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SearchConfig {
     /// Maximum number of unique vectors to find (0 = find all).
     pub max_vectors: usize,
     /// Additional clauses to add beyond structural + constraint clauses.
     /// Used by fracture to fix variables.
     pub extra_clauses: CnfClauses,
-}
-
-impl Default for SearchConfig {
-    fn default() -> Self {
-        Self {
-            max_vectors: 0,
-            extra_clauses: vec![],
-        }
-    }
 }
 
 /// Collect all SAT variables used in the encoding.
@@ -75,10 +66,8 @@ fn all_domain_vars(encoded: &EncodedInputSpace) -> Vec<Var> {
 /// Only includes literals for variables that belong to our encoded domains.
 /// This avoids issues with solver-internal variables and ensures proper blocking.
 fn domain_blocking_clause(encoded: &EncodedInputSpace, model: &[Lit]) -> Vec<Lit> {
-    let domain_var_set: HashSet<usize> = all_domain_vars(encoded)
-        .iter()
-        .map(|v| v.index())
-        .collect();
+    let domain_var_set: HashSet<usize> =
+        all_domain_vars(encoded).iter().map(|v| v.index()).collect();
 
     model
         .iter()
@@ -130,9 +119,9 @@ pub fn find_one(
 
     match solver.solve() {
         Ok(true) => {
-            let model = solver.model().ok_or_else(|| {
-                SearchError::Solver("SAT but no model returned".to_string())
-            })?;
+            let model = solver
+                .model()
+                .ok_or_else(|| SearchError::Solver("SAT but no model returned".to_string()))?;
             let assignments = decode_model(encoded, &model);
             Ok(SatResult::Sat(TestVector { assignments }))
         }
@@ -165,9 +154,9 @@ pub fn find_many(
 
         match solver.solve() {
             Ok(true) => {
-                let model = solver.model().ok_or_else(|| {
-                    SearchError::Solver("SAT but no model returned".to_string())
-                })?;
+                let model = solver
+                    .model()
+                    .ok_or_else(|| SearchError::Solver("SAT but no model returned".to_string()))?;
                 let assignments = decode_model(encoded, &model);
                 let vector = TestVector { assignments };
 
@@ -242,12 +231,17 @@ mod tests {
         let mut domains = HashMap::new();
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
         let vectors = solve_input_space(&input_space, 1).unwrap();
         assert_eq!(vectors.len(), 1);
-        assert!(matches!(vectors[0].assignments["flag"], DomainValue::Bool(_)));
+        assert!(matches!(
+            vectors[0].assignments["flag"],
+            DomainValue::Bool(_)
+        ));
     }
 
     #[test]
@@ -255,7 +249,9 @@ mod tests {
         let mut domains = HashMap::new();
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
         let vectors = solve_input_space(&input_space, 0).unwrap();
@@ -277,7 +273,8 @@ mod tests {
         let vectors = solve_input_space(&input_space, 0).unwrap();
         assert_eq!(vectors.len(), 3);
 
-        let values: HashSet<&DomainValue> = vectors.iter().map(|v| &v.assignments["role"]).collect();
+        let values: HashSet<&DomainValue> =
+            vectors.iter().map(|v| &v.assignments["role"]).collect();
         assert!(values.contains(&DomainValue::Enum("admin".into())));
         assert!(values.contains(&DomainValue::Enum("member".into())));
         assert!(values.contains(&DomainValue::Enum("guest".into())));
@@ -297,7 +294,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let constraints = vec![InputConstraint {
@@ -347,7 +346,9 @@ mod tests {
         );
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         // Total: 3 x 2 = 6 possible vectors.
         let input_space = make_input_space(domains, vec![]);
@@ -368,7 +369,9 @@ mod tests {
         );
         domains.insert(
             "auth".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
 
         let input_space = make_input_space(domains, vec![]);
@@ -426,7 +429,9 @@ mod tests {
         let mut domains = HashMap::new();
         domains.insert(
             "flag".to_string(),
-            Domain { domain_type: DomainType::Bool },
+            Domain {
+                domain_type: DomainType::Bool,
+            },
         );
         let input_space = make_input_space(domains, vec![]);
         let encoded = super::super::domain::encode_input_space(&input_space).unwrap();

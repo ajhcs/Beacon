@@ -20,7 +20,11 @@ pub enum ValidationError {
     AllZeroWeights { location: String },
 
     #[error("Invalid repeat bounds at '{location}': min ({min}) > max ({max})")]
-    InvalidRepeatBounds { location: String, min: u32, max: u32 },
+    InvalidRepeatBounds {
+        location: String,
+        min: u32,
+        max: u32,
+    },
 }
 
 pub fn validate_ir(ir: &BeaconIR) -> Result<(), Vec<ValidationError>> {
@@ -139,11 +143,7 @@ fn collect_refs(
 }
 
 /// Recursively check structural constraints in protocol nodes.
-fn check_structure(
-    node: &ProtocolNode,
-    proto_name: &str,
-    errors: &mut Vec<ValidationError>,
-) {
+fn check_structure(node: &ProtocolNode, proto_name: &str, errors: &mut Vec<ValidationError>) {
     match node {
         ProtocolNode::Alt { branches } => {
             if !branches.is_empty() && branches.iter().all(|b| b.weight == 0) {

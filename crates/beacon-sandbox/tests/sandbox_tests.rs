@@ -54,7 +54,9 @@ fn test_call_exported_function() {
     let mut instance = sandbox.instantiate(&module).unwrap();
 
     // create_document(42) should return 42 (echo function)
-    let results = instance.call_func("create_document", &[42i32.into()]).unwrap();
+    let results = instance
+        .call_func("create_document", &[42i32.into()])
+        .unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].i32(), Some(42));
 }
@@ -68,7 +70,9 @@ fn test_call_void_function() {
     let mut instance = sandbox.instantiate(&module).unwrap();
 
     // delete_document(1, 2) returns void
-    let results = instance.call_func("delete_document", &[1i32.into(), 2i32.into()]).unwrap();
+    let results = instance
+        .call_func("delete_document", &[1i32.into(), 2i32.into()])
+        .unwrap();
     assert!(results.is_empty());
 }
 
@@ -165,7 +169,11 @@ fn test_memory_limit() {
 
     // Try to grow by 100 pages (6.4MB) — should fail (return -1)
     let results = instance.call_func("grow_memory", &[100i32.into()]).unwrap();
-    assert_eq!(results[0].i32(), Some(-1), "memory growth beyond limit should return -1");
+    assert_eq!(
+        results[0].i32(),
+        Some(-1),
+        "memory growth beyond limit should return -1"
+    );
 }
 
 #[test]

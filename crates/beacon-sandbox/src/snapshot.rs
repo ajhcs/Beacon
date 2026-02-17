@@ -1,5 +1,5 @@
 use crate::config::SandboxConfig;
-use crate::sandbox::{Sandbox, SandboxError, SandboxInstance, LoadedModule};
+use crate::sandbox::{LoadedModule, Sandbox, SandboxError, SandboxInstance};
 use wasmtime::Val;
 
 /// A paired snapshot of WASM instance state and model generation number.
@@ -129,7 +129,7 @@ impl SandboxInstance {
             let target_size = data.len();
 
             if target_size > current_size {
-                let pages_needed = ((target_size - current_size) + 65535) / 65536;
+                let pages_needed = (target_size - current_size).div_ceil(65536);
                 memory
                     .grow(&mut self.store, pages_needed as u64)
                     .map_err(SandboxError::Engine)?;

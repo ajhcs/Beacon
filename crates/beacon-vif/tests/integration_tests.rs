@@ -119,10 +119,7 @@ fn make_document_bindings() -> Bindings {
         actions,
         event_hooks: EventHooks {
             mode: "function_intercept".to_string(),
-            observe: vec![
-                "create_document".to_string(),
-                "delete".to_string(),
-            ],
+            observe: vec!["create_document".to_string(), "delete".to_string()],
             capture: vec!["args".to_string(), "return_value".to_string()],
         },
     }

@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(*mem.non_reproduction_counts.get(&0).unwrap(), 2);
 
         mem.record_reproduction(0);
-        assert!(mem.non_reproduction_counts.get(&0).is_none());
+        assert!(!mem.non_reproduction_counts.contains_key(&0));
     }
 
     #[test]

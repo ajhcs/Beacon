@@ -144,10 +144,7 @@ impl VectorPool {
     /// Get the number of vectors in a target's queue.
     pub fn targeted_len(&self, target: &CoveragePoint) -> usize {
         let key = CoveragePointKey(target.clone());
-        self.targeted
-            .get(&key)
-            .map(|q| q.len())
-            .unwrap_or(0)
+        self.targeted.get(&key).map(|q| q.len()).unwrap_or(0)
     }
 
     /// Get total vectors pushed (cumulative).
