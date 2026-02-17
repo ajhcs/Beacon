@@ -1,0 +1,315 @@
+{
+  "entities": {
+    "User": {
+      "fields": {
+        "id": { "type": "string", "format": "uuid" },
+        "role": { "type": "enum", "values": ["admin", "member", "guest"] },
+        "authenticated": { "type": "bool" }
+      }
+    },
+    "Document": {
+      "fields": {
+        "id": { "type": "string", "format": "uuid" },
+        "owner_id": { "type": "ref", "entity": "User" },
+        "visibility": { "type": "enum", "values": ["private", "shared", "public"] },
+        "deleted": { "type": "bool", "default": false }
+      }
+    }
+  },
+  "refinements": {
+    "AuthenticatedUser": {
+      "base": "User",
+      "predicate": ["eq", ["field", "self", "authenticated"], true]
+    },
+    "OwnedDocument": {
+      "base": "Document",
+      "params": [{ "name": "actor", "type": "User" }],
+      "predicate": ["eq", ["field", "self", "owner_id"], ["field", "actor", "id"]]
+    },
+    "AccessibleDocument": {
+      "base": "Document",
+      "params": [{ "name": "actor", "type": "User" }],
+      "predicate": ["or",
+        ["eq", ["field", "self", "visibility"], "public"],
+        ["eq", ["field", "self", "owner_id"], ["field", "actor", "id"]],
+        ["and",
+          ["eq", ["field", "self", "visibility"], "shared"],
+          ["neq", ["field", "actor", "role"], "guest"]
+        ]
+      ]
+    }
+  },
+  "functions": {
+    "canAccess": {
+      "classification": "derived",
+      "params": [{ "name": "u", "type": "User" }, { "name": "d", "type": "Document" }],
+      "body": ["is", "d", "AccessibleDocument", { "actor": "u" }],
+      "returns": "bool"
+    },
+    "checkAccessDUT": {
+      "classification": "observer",
+      "params": [{ "name": "u", "type": "User" }, { "name": "d", "type": "Document" }],
+      "binding": "check_access",
+      "returns": "bool"
+    }
+  },
+  "protocols": {
+    "document_lifecycle": {
+      "root": {
+        "type": "seq",
+        "children": [
+          { "type": "call", "action": "create_document" },
+          {
+            "type": "repeat",
+            "min": 0,
+            "max": 50,
+            "body": {
+              "type": "alt",
+              "branches": [
+                {
+                  "id": "read_path",
+                  "weight": 40,
+                  "guard": ["is", "doc", "AccessibleDocument", { "actor": "actor" }],
+                  "body": { "type": "call", "action": "read" }
+                },
+                {
+                  "id": "publish_path",
+                  "weight": 25,
+                  "guard": ["and",
+                    ["is", "actor", "AuthenticatedUser"],
+                    ["is", "doc", "OwnedDocument", { "actor": "actor" }]
+                  ],
+                  "body": { "type": "call", "action": "publish" }
+                },
+                {
+                  "id": "archive_restore_cycle",
+                  "weight": 20,
+                  "body": {
+                    "type": "seq",
+                    "children": [
+                      { "type": "call", "action": "archive" },
+                      {
+                        "type": "alt",
+                        "branches": [
+                          { "id": "restore_it", "weight": 60, "body": { "type": "call", "action": "restore" } },
+                          { "id": "leave_archived", "weight": 40, "body": { "type": "ref", "protocol": "idle" } }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "delete_path",
+                  "weight": 15,
+                  "guard": ["is", "actor", "AuthenticatedUser"],
+                  "body": { "type": "call", "action": "delete" }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "idle": {
+      "root": {
+        "type": "call",
+        "action": "read"
+      }
+    }
+  },
+  "effects": {
+    "create_document": {
+      "creates": { "entity": "Document", "assign": "doc" },
+      "sets": [
+        { "target": ["doc", "owner_id"], "value": ["field", "actor", "id"] },
+        { "target": ["doc", "visibility"], "value": "private" },
+        { "target": ["doc", "deleted"], "value": false }
+      ]
+    },
+    "publish": {
+      "sets": [
+        { "target": ["doc", "visibility"], "value": "public" }
+      ]
+    },
+    "delete": {
+      "sets": [
+        { "target": ["doc", "deleted"], "value": true }
+      ]
+    },
+    "archive": {
+      "sets": [
+        { "target": ["doc", "visibility"], "value": "private" }
+      ]
+    },
+    "restore": {
+      "sets": [
+        { "target": ["doc", "visibility"], "value": "shared" }
+      ]
+    },
+    "read": {
+      "sets": []
+    }
+  },
+  "properties": {
+    "ownership_isolation": {
+      "type": "invariant",
+      "predicate": ["forall", "d", "Document", ["forall", "u", "User",
+        ["implies",
+          ["and",
+            ["eq", ["field", "d", "visibility"], "private"],
+            ["neq", ["field", "d", "owner_id"], ["field", "u", "id"]]
+          ],
+          ["not", ["derived", "canAccess", "u", "d"]]
+        ]
+      ]],
+      "description": "No user can access a private document they don't own"
+    },
+    "auth_before_mutation": {
+      "type": "temporal",
+      "rule": ["before", { "tag": "mutating" }, ["eq", ["field", "actor", "authenticated"], true]],
+      "description": "All mutations require authentication"
+    },
+    "delete_is_permanent": {
+      "type": "temporal",
+      "rule": ["after", "delete", ["never", "restore", { "same": "entity" }]],
+      "description": "Deleted entities cannot be restored"
+    }
+  },
+  "generators": {
+    "archived_document": {
+      "description": "A document in archived state",
+      "sequence": [
+        { "action": "create_document", "with": { "actor": { "generate": "User", "where": ["eq", ["field", "self", "authenticated"], true] } } },
+        { "action": "publish", "with": {} },
+        { "action": "archive", "with": {} }
+      ],
+      "postcondition": ["eq", ["field", "doc", "visibility"], "private"]
+    },
+    "multi_user_scenario": {
+      "description": "Two users with separate documents",
+      "sequence": [
+        { "action": "create_document", "with": { "actor": { "bind": "user_a" } } },
+        { "action": "create_document", "with": { "actor": { "bind": "user_b" } } }
+      ]
+    }
+  },
+  "exploration": {
+    "weights": {
+      "scope": "per_alt_branch_and_model_state",
+      "initial": "from_protocol",
+      "decay": "per_epoch"
+    },
+    "directives_allowed": [
+      { "type": "adjust_weight", "description": "Change weight on any alt branch (state-conditioned)" },
+      { "type": "force", "description": "Force a specific terminal/action before others" },
+      { "type": "skip", "description": "Skip a branch for bounded N iterations" },
+      { "type": "loop_limit", "description": "Adjust repeat bounds within declared min/max" },
+      { "type": "swap_observer", "description": "Bind a deeper observer to an action" }
+    ],
+    "adaptation_signals": [
+      { "signal": "coverage_delta", "description": "New state/transition covered" },
+      { "signal": "property_violation", "description": "An invariant or temporal rule failed" },
+      { "signal": "discrepancy", "description": "Model truth diverged from DUT observation" },
+      { "signal": "crash", "description": "DUT panicked or trapped in WASM" },
+      { "signal": "timeout", "description": "DUT action exceeded time budget" },
+      { "signal": "guard_failure", "description": "Guard prevented transition from current state" },
+      { "signal": "coverage_plateau", "description": "Coverage delta rate approaching zero" }
+    ],
+    "strategy": {
+      "initial": "pseudo_random_traversal",
+      "fallback": "targeted_on_violation"
+    },
+    "epoch_size": 100,
+    "coverage_floor_threshold": 0.05,
+    "concurrency": {
+      "mode": "deterministic_interleaving",
+      "threads": 4
+    }
+  },
+  "inputs": {
+    "domains": {
+      "actor_role": { "type": "enum", "values": ["admin", "member", "guest"] },
+      "actor_authenticated": { "type": "bool" },
+      "doc_visibility": { "type": "enum", "values": ["private", "shared", "public"] },
+      "actor_is_owner": { "type": "bool" },
+      "concurrent_actors": { "type": "int", "min": 1, "max": 8 }
+    },
+    "constraints": [
+      { "name": "guest_never_admin", "rule": ["implies", ["eq", "actor_role", "guest"], ["neq", "actor_role", "admin"]] }
+    ],
+    "coverage": {
+      "targets": [
+        { "type": "all_pairs", "over": ["actor_role", "doc_visibility", "actor_is_owner"] },
+        { "type": "each_transition", "machine": "document_lifecycle" },
+        { "type": "boundary", "domain": "concurrent_actors", "values": [1, 2, 8] }
+      ],
+      "seed": 42,
+      "reproducible": true
+    }
+  },
+  "bindings": {
+    "runtime": "wasm",
+    "entry": "main.wasm",
+    "actions": {
+      "create_document": {
+        "function": "create_document",
+        "args": ["actor_id"],
+        "returns": { "type": "Document" },
+        "mutates": true,
+        "idempotent": false,
+        "reads": [],
+        "writes": ["Document"]
+      },
+      "read": {
+        "function": "get_document",
+        "args": ["actor_id", "doc_id"],
+        "returns": { "type": "Document" },
+        "mutates": false,
+        "idempotent": true,
+        "reads": ["Document"],
+        "writes": []
+      },
+      "delete": {
+        "function": "delete_document",
+        "args": ["actor_id", "doc_id"],
+        "returns": { "type": "void" },
+        "mutates": true,
+        "idempotent": false,
+        "reads": [],
+        "writes": ["Document"]
+      },
+      "publish": {
+        "function": "publish_document",
+        "args": ["actor_id", "doc_id"],
+        "returns": { "type": "void" },
+        "mutates": true,
+        "idempotent": true,
+        "reads": [],
+        "writes": ["Document"]
+      },
+      "archive": {
+        "function": "archive_document",
+        "args": ["actor_id", "doc_id"],
+        "returns": { "type": "void" },
+        "mutates": true,
+        "idempotent": false,
+        "reads": [],
+        "writes": ["Document"]
+      },
+      "restore": {
+        "function": "restore_document",
+        "args": ["actor_id", "doc_id"],
+        "returns": { "type": "void" },
+        "mutates": true,
+        "idempotent": false,
+        "reads": [],
+        "writes": ["Document"]
+      }
+    },
+    "event_hooks": {
+      "mode": "function_intercept",
+      "observe": ["create_document", "publish", "delete", "archive", "restore"],
+      "capture": ["args", "return_value", "side_effects"]
+    }
+  }
+}
