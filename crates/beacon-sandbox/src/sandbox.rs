@@ -244,4 +244,9 @@ impl SandboxInstance {
     pub fn remaining_fuel(&self) -> Option<u64> {
         self.store.get_fuel().ok()
     }
+
+    /// Get the configured fuel budget per action.
+    pub fn fuel_budget(&self) -> Option<u64> {
+        self.fuel_per_action
+    }
 }

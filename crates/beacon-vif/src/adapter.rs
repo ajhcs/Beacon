@@ -101,18 +101,23 @@ impl VerificationAdapter {
         };
 
         let func_name = &binding.function;
-        let fuel_before = instance.remaining_fuel();
 
         // Serialize args as i32 WasmVals
         let wasm_args: Vec<WasmVal> = args.iter().map(|&a| WasmVal::from(a)).collect();
 
+        // call_func resets fuel before executing, so measure AFTER the call
+        // by checking remaining fuel (call_func sets it to fuel_per_action, then
+        // the WASM consumes some)
         match instance.call_func(func_name, &wasm_args) {
             Ok(results) => {
                 let fuel_after = instance.remaining_fuel();
-                let fuel_consumed = match (fuel_before, fuel_after) {
-                    (Some(before), Some(after)) => Some(before.saturating_sub(after)),
-                    _ => None,
-                };
+                // fuel_per_action was set at start of call_func, remaining is what's left
+                let fuel_consumed = fuel_after.map(|after| {
+                    // The sandbox resets to fuel_per_action before each call
+                    // So consumed = fuel_per_action - remaining
+                    let budget = instance.fuel_budget().unwrap_or(0);
+                    budget.saturating_sub(after)
+                });
 
                 let return_value = results.first().and_then(|v| v.i32());
 
@@ -132,7 +137,7 @@ impl VerificationAdapter {
                 args: args.to_vec(),
                 return_value: None,
                 trapped: true,
-                fuel_consumed: fuel_before,
+                fuel_consumed: instance.fuel_budget(),
                 error: Some("Fuel exhausted".to_string()),
             },
             Err(e) => ActionResult {
