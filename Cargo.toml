@@ -3,6 +3,9 @@ resolver = "2"
 members = [
     "crates/beacon-ir",
     "crates/beacon-compiler",
+    "crates/beacon-model",
+    "crates/beacon-sandbox",
+    "crates/beacon-vif",
 ]
 
 [workspace.package]

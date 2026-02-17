@@ -1,0 +1,11 @@
+[package]
+name = "beacon-model"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+beacon-ir = { path = "../beacon-ir" }
+beacon-compiler = { path = "../beacon-compiler" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
