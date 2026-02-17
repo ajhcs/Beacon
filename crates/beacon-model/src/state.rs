@@ -118,13 +118,18 @@ impl ModelState {
 
     /// Set a field value on an entity instance.
     pub fn set_field(&mut self, id: &InstanceId, field: &str, value: Value) {
-        self.generation += 1;
         if let Some(instances) = self.instances.get_mut(&id.entity_type) {
             let instances = Arc::make_mut(instances);
             if let Some(inst) = instances.iter_mut().find(|inst| inst.id == *id) {
                 inst.set_field(field, value);
+                self.generation += 1;
             }
         }
+    }
+
+    /// Get all known entity type names.
+    pub fn entity_types(&self) -> Vec<String> {
+        self.instances.keys().cloned().collect()
     }
 
     /// Get all instances of a given entity type.

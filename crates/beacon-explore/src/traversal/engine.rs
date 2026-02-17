@@ -217,6 +217,8 @@ impl<'a, V: VectorSource, E: ActionExecutor> TraversalEngine<'a, V, E> {
                         self.emit_signal(SignalType::GuardFailure {
                             branch_id: String::new(),
                             action,
+                            // TODO: compute from actual model state via weight_table::compute_model_state_hash
+                            model_state_hash: 0,
                         });
                         // Push successors so traversal continues past this node
                         self.push_successors(node_id, &mut object_stack);

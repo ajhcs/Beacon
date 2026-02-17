@@ -66,17 +66,23 @@ pub enum FnClassification {
     Observer,
 }
 
+/// Maximum nesting depth for expression parsing to prevent stack overflow.
+const MAX_EXPR_DEPTH: usize = 64;
+
 impl<'de> Deserialize<'de> for Expr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let value = serde_json::Value::deserialize(deserializer)?;
-        parse_expr(&value).map_err(serde::de::Error::custom)
+        parse_expr_inner(&value, 0).map_err(serde::de::Error::custom)
     }
 }
 
-fn parse_expr(value: &serde_json::Value) -> Result<Expr, String> {
+fn parse_expr_inner(value: &serde_json::Value, depth: usize) -> Result<Expr, String> {
+    if depth > MAX_EXPR_DEPTH {
+        return Err(format!("expression nesting depth exceeds maximum of {MAX_EXPR_DEPTH}"));
+    }
     match value {
         // Literals: bool, number, string (non-array)
         serde_json::Value::Bool(b) => Ok(Expr::Literal(Literal::Bool(*b))),
@@ -118,7 +124,7 @@ fn parse_expr(value: &serde_json::Value) -> Result<Expr, String> {
                     };
                     let var = arr[1].as_str().ok_or("quantifier var must be a string")?.to_string();
                     let domain = arr[2].as_str().ok_or("quantifier domain must be a string")?.to_string();
-                    let body = Box::new(parse_expr(&arr[3])?);
+                    let body = Box::new(parse_expr_inner(&arr[3], depth + 1)?);
                     Ok(Expr::Quantifier { kind, var, domain, body })
                 }
 
@@ -177,9 +183,29 @@ fn parse_expr(value: &serde_json::Value) -> Result<Expr, String> {
                         "gte" => OpKind::Gte,
                         other => return Err(format!("unknown expression operator: {other}")),
                     };
+                    let arg_count = arr.len() - 1;
+                    // Arity validation.
+                    match op {
+                        OpKind::Not => {
+                            if arg_count != 1 {
+                                return Err(format!("'not' requires exactly 1 argument, got {arg_count}"));
+                            }
+                        }
+                        OpKind::Eq | OpKind::Neq | OpKind::Implies
+                        | OpKind::Lt | OpKind::Lte | OpKind::Gt | OpKind::Gte => {
+                            if arg_count != 2 {
+                                return Err(format!("'{tag}' requires exactly 2 arguments, got {arg_count}"));
+                            }
+                        }
+                        OpKind::And | OpKind::Or => {
+                            if arg_count < 1 {
+                                return Err(format!("'{tag}' requires at least 1 argument, got {arg_count}"));
+                            }
+                        }
+                    }
                     let args = arr[1..]
                         .iter()
-                        .map(parse_expr)
+                        .map(|v| parse_expr_inner(v, depth + 1))
                         .collect::<Result<Vec<_>, _>>()?;
                     Ok(Expr::Op { op, args })
                 }

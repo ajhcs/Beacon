@@ -99,6 +99,8 @@ fn walk_node(
             if let Some(effect) = ir.effects.get(action) {
                 apply_effect(state, effect, actor_id)?;
             }
+            // Record in trace so temporal properties can observe the action sequence.
+            state.record_action(action, &[]);
             result.steps_executed += 1;
             result.actions_executed.push(action.clone());
             result.unique_actions.insert(action.clone());

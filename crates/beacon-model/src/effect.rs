@@ -63,17 +63,27 @@ fn resolve_target_instance(
             if let Some(id) = created_id {
                 return Ok(id.clone());
             }
-            // Otherwise, find the most recent instance that could match
-            // Try all entity types to find the last created instance
-            // This is a simplification — in a full implementation, variable bindings
-            // would be resolved through a proper scope
-            for entity_type in ["Document", "User"] {
-                let instances = state.all_instances(entity_type);
-                if let Some(last) = instances.last() {
-                    return Ok(last.id.clone());
+            // Try var_name as an entity type first (direct match).
+            let instances = state.all_instances(var_name);
+            if let Some(last) = instances.last() {
+                return Ok(last.id.clone());
+            }
+            // Fallback: find the most recently created non-actor instance
+            // across all entity types (highest index = most recent).
+            let mut best: Option<&InstanceId> = None;
+            for entity_type in state.entity_types() {
+                for inst in state.all_instances(&entity_type) {
+                    if inst.id == *actor_id {
+                        continue; // Skip the actor
+                    }
+                    match best {
+                        None => best = Some(&inst.id),
+                        Some(prev) if inst.id.index > prev.index => best = Some(&inst.id),
+                        _ => {}
+                    }
                 }
             }
-            Err(EffectError::NoInstance {
+            best.cloned().ok_or(EffectError::NoInstance {
                 entity_type: var_name.to_string(),
             })
         }

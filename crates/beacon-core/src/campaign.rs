@@ -167,13 +167,14 @@ impl CampaignManager {
 
     /// Transition a campaign to a new phase.
     pub fn set_phase(&self, id: &str, phase: CampaignPhase) -> Result<(), CampaignError> {
-        let mut campaigns = self.campaigns.lock().unwrap();
-        let state = campaigns
-            .get_mut(id)
-            .ok_or_else(|| CampaignError::NotFound(id.to_string()))?;
-        state.phase = phase.clone();
-
-        // Update analytics.
+        {
+            let mut campaigns = self.campaigns.lock().unwrap();
+            let state = campaigns
+                .get_mut(id)
+                .ok_or_else(|| CampaignError::NotFound(id.to_string()))?;
+            state.phase = phase.clone();
+        }
+        // Lock released before acquiring analytics lock to prevent deadlock.
         if let Some(analytics) = self.analytics.lock().unwrap().get_mut(id) {
             analytics.state = phase;
         }
@@ -228,19 +229,22 @@ impl CampaignManager {
 
     /// Abort a campaign.
     pub fn abort(&self, campaign_id: &str) -> Result<CampaignState, CampaignError> {
-        let mut campaigns = self.campaigns.lock().unwrap();
-        let state = campaigns
-            .get_mut(campaign_id)
-            .ok_or_else(|| CampaignError::NotFound(campaign_id.to_string()))?;
+        let result = {
+            let mut campaigns = self.campaigns.lock().unwrap();
+            let state = campaigns
+                .get_mut(campaign_id)
+                .ok_or_else(|| CampaignError::NotFound(campaign_id.to_string()))?;
 
-        state.phase = CampaignPhase::Aborted;
-        state.stop_reason = Some(StopReason::UserAborted);
-
+            state.phase = CampaignPhase::Aborted;
+            state.stop_reason = Some(StopReason::UserAborted);
+            state.clone()
+        };
+        // Lock released before acquiring analytics lock to prevent deadlock.
         if let Some(analytics) = self.analytics.lock().unwrap().get_mut(campaign_id) {
             analytics.state = CampaignPhase::Aborted;
         }
 
-        Ok(state.clone())
+        Ok(result)
     }
 
     /// Get analytics for a campaign.
@@ -273,22 +277,29 @@ fn estimate_budget(ir: &beacon_ir::types::BeaconIR) -> Budget {
         .domains
         .values()
         .map(|d| match &d.domain_type {
-            beacon_ir::types::DomainType::Bool => 2,
-            beacon_ir::types::DomainType::Enum { values } => values.len() as u64,
-            beacon_ir::types::DomainType::Int { min, max } => (max - min + 1) as u64,
+            beacon_ir::types::DomainType::Bool => 2u64,
+            beacon_ir::types::DomainType::Enum { values } => values.len().max(1) as u64,
+            beacon_ir::types::DomainType::Int { min, max } => {
+                if max >= min {
+                    ((max - min) as u64).saturating_add(1)
+                } else {
+                    1 // Invalid range, treat as single value
+                }
+            }
         })
-        .product::<u64>()
+        .try_fold(1u64, |acc, x| acc.checked_mul(x))
+        .unwrap_or(u64::MAX)
         .max(1);
     let coverage_target_count = ir.inputs.coverage.targets.len() as u64;
 
     // min_iterations = entities * transitions * input_domains * coverage_targets
-    // with a floor of 100
-    let min_iterations = (entity_count
-        * effect_count.max(1)
-        * protocol_count.max(1)
-        * input_domain_size.min(1000) // cap to prevent explosion
-        * coverage_target_count.max(1))
-    .max(100);
+    // with a floor of 100 and cap on input_domain_size to prevent explosion
+    let min_iterations = entity_count
+        .saturating_mul(effect_count.max(1))
+        .saturating_mul(protocol_count.max(1))
+        .saturating_mul(input_domain_size.min(1000))
+        .saturating_mul(coverage_target_count.max(1))
+        .max(100);
 
     // Timeout: 1 second per 100 iterations, minimum 10 seconds
     let min_timeout_secs = (min_iterations / 100).max(10);

@@ -34,6 +34,8 @@ pub enum SignalType {
     GuardFailure {
         branch_id: String,
         action: String,
+        /// Abstract hash of the model state when the guard failed.
+        model_state_hash: u64,
     },
     /// Coverage delta rate approaching zero.
     CoveragePlateau {

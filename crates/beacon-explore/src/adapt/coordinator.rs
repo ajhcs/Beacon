@@ -224,7 +224,9 @@ impl Coordinator {
             }
 
             SignalType::GuardFailure {
-                branch_id, action, ..
+                branch_id,
+                action,
+                model_state_hash,
             } => {
                 // State-conditioned decay: "branch B is invalid WHEN model is in state S"
                 let bid = if branch_id.is_empty() {
@@ -234,7 +236,7 @@ impl Coordinator {
                 };
                 vec![Directive::AdjustWeight {
                     branch_id: bid.clone(),
-                    model_state_hash: 0, // Caller should provide real hash
+                    model_state_hash: *model_state_hash,
                     multiplier: self.config.guard_failure_decay,
                 }]
             }
@@ -405,6 +407,7 @@ mod tests {
             make_signal(SignalType::GuardFailure {
                 branch_id: "br".into(),
                 action: "a".into(),
+                model_state_hash: 42,
             }),
             &mut weight_table,
             &[],
