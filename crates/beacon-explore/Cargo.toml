@@ -1,0 +1,23 @@
+[package]
+name = "beacon-explore"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+beacon-ir = { path = "../beacon-ir" }
+beacon-compiler = { path = "../beacon-compiler" }
+beacon-model = { path = "../beacon-model" }
+beacon-sandbox = { path = "../beacon-sandbox" }
+beacon-vif = { path = "../beacon-vif" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+varisat.workspace = true
+rayon.workspace = true
+crossbeam.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+wat.workspace = true

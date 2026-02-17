@@ -19,7 +19,7 @@ pub enum CompileError {
     Protocol(#[from] crate::protocol::ProtocolCompileError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompiledIR {
     pub graphs: HashMap<String, NdaGraph>,
     pub predicates: HashMap<String, CompiledExpr>,
